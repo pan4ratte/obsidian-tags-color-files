@@ -15,6 +15,8 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 4. Export and import plugin settings to a file.
 
+5. Localization support. Currently available languages: English, Russian.
+
 
 ## Plugin Use Case
 
@@ -30,5 +32,6 @@ I am open to suggestions and new ideas that expand the plugin's functionality. H
 2. The “Dots Before text” and “Dots After Text” coloring methods are currently poorly integrated into the explorer interface. The code needs to be updated so that these coloring methods do not conflict with other interface elements.
 
 3. A mechanism needs to be developed to prevent the creation of two rules for the same tag.
+
 
 4. To improve the user experience, it would be nice to add suggestions while typing a tag when creating a new rule.
