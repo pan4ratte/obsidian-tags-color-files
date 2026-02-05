@@ -1,0 +1,100 @@
+/* --- FILE EXPLORER STYLES --- */
+
+.tag-dots-container {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    width: 0px; 
+    height: 0px;
+    z-index: 10;
+}
+
+.tag-dots-container.is-before { left: 0; justify-content: flex-end; }
+.tag-dots-container.is-after { right: 0; justify-content: flex-end; }
+
+.tag-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    position: absolute;
+    border: 0.5px solid var(--background-primary);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.nav-file-title.colored-tag-file {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* --- SETTINGS TAB STYLES --- */
+
+.tag-rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.tag-color-setting-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-bottom: 8px;
+    padding: 4px !important;
+}
+
+/* TRIPLE LOCK: Ensures color picker is ALWAYS a circle */
+.tag-color-picker-input {
+    appearance: none !important;
+    border: none !important;
+    padding: 0 !important;
+    background: none !important;
+    cursor: pointer !important;
+    
+    /* Lock dimensions */
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    flex: 0 0 24px;
+    
+    border-radius: 50% !important;
+    overflow: hidden !important;
+}
+
+.tag-color-picker-input::-webkit-color-swatch-wrapper {
+    padding: 0 !important;
+    border-radius: 50% !important;
+}
+
+.tag-color-picker-input::-webkit-color-swatch {
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 50% !important;
+}
+
+/* Reorder and Delete elements */
+.tag-color-setting-item input[type="text"] {
+    flex: 1 1 auto !important;
+    height: 30px !important;
+}
+
+.drag-handle {
+    color: var(--text-muted);
+    cursor: grab;
+    flex: 0 0 auto;
+}
+
+.tag-color-setting-item.is-dragging {
+    opacity: 0.3;
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-color-setting-item.drag-over {
+    border-top: 2px solid var(--interactive-accent);
+}

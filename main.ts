@@ -1,0 +1,293 @@
+import {
+	App,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	TFile,
+	getAllTags,
+	Notice,
+	setIcon
+} from 'obsidian';
+import { t } from './i18n';
+
+interface TagColorConfig {
+	tag: string;
+	color: string;
+}
+
+interface TagsColorFilesSettings {
+	tagColors: TagColorConfig[];
+	colorStrategy: 'text' | 'background' | 'before-text' | 'after-text';
+}
+
+const DEFAULT_SETTINGS: TagsColorFilesSettings = {
+	tagColors: [],
+	colorStrategy: 'text'
+};
+
+export default class TagsColorFilesPlugin extends Plugin {
+	settings: TagsColorFilesSettings;
+	observer: MutationObserver;
+	isUpdating = false;
+
+	async onload() {
+		await this.loadSettings();
+		this.addSettingTab(new TagsColorFilesSettingTab(this.app, this));
+
+		this.registerEvent(this.app.metadataCache.on('changed', () => this.updateFileColors()));
+		this.registerEvent(this.app.vault.on('rename', () => this.updateFileColors()));
+		this.registerEvent(this.app.workspace.on('layout-change', () => this.updateFileColors()));
+
+		this.observer = new MutationObserver((mutations) => {
+			if (this.isUpdating) return;
+			let shouldUpdate = false;
+			for (const m of mutations) {
+				for (const node of Array.from(m.addedNodes)) {
+					if (node instanceof HTMLElement && (node.classList.contains('nav-file') || node.querySelector('.nav-file-title'))) {
+						shouldUpdate = true;
+						break;
+					}
+				}
+				if (shouldUpdate) break;
+			}
+			if (shouldUpdate) this.updateFileColors();
+		});
+
+		this.app.workspace.onLayoutReady(() => {
+			this.observer.observe(document.body, { childList: true, subtree: true });
+			setTimeout(() => this.updateFileColors(), 500);
+		});
+	}
+
+	onunload() {
+		if (this.observer) this.observer.disconnect();
+		this.removeFileColors();
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		this.settings.tagColors = this.settings.tagColors.filter(rule => rule.tag && rule.tag.trim() !== "");
+		await this.saveData(this.settings);
+		this.updateFileColors();
+	}
+
+	removeFileColors() {
+		const fileExplorers = this.app.workspace.getLeavesOfType('file-explorer');
+		fileExplorers.forEach((leaf) => {
+			const navFiles = leaf.view.containerEl.querySelectorAll('.nav-file-title');
+			navFiles.forEach((el: HTMLElement) => this.cleanElement(el));
+		});
+	}
+
+	private cleanElement(el: HTMLElement) {
+		el.style.removeProperty('color');
+		el.style.removeProperty('background-color');
+		el.style.removeProperty('border-radius');
+		el.classList.remove('colored-tag-file');
+		const existingDots = el.querySelector('.tag-dots-container');
+		if (existingDots) existingDots.remove();
+	}
+
+	updateFileColors() {
+		if (this.isUpdating) return;
+
+		window.requestAnimationFrame(() => {
+			this.isUpdating = true;
+			const fileExplorers = this.app.workspace.getLeavesOfType('file-explorer');
+			
+			fileExplorers.forEach((leaf) => {
+				const navFiles = leaf.view.containerEl.querySelectorAll('.nav-file-title');
+
+				navFiles.forEach((el: HTMLElement) => {
+					const path = el.getAttribute('data-path');
+					if (!path) return;
+
+					const file = this.app.vault.getAbstractFileByPath(path);
+					if (file instanceof TFile) {
+						const cache = this.app.metadataCache.getFileCache(file);
+						const fileTags = getAllTags(cache);
+
+						this.cleanElement(el);
+
+						if (!fileTags || this.settings.tagColors.length === 0) return;
+
+						const matchedColors: string[] = [];
+						for (const config of this.settings.tagColors) {
+							if (!config.tag) continue;
+							const normalizeConfigTag = config.tag.startsWith('#') ? config.tag : '#' + config.tag;
+							if (fileTags.some(t => t.toLowerCase() === normalizeConfigTag.toLowerCase())) {
+								matchedColors.push(config.color);
+							}
+						}
+
+						if (matchedColors.length > 0) {
+							el.classList.add('colored-tag-file');
+							
+							if (this.settings.colorStrategy === 'text') {
+								el.style.color = matchedColors[0];
+							} else if (this.settings.colorStrategy === 'background') {
+								el.style.backgroundColor = matchedColors[0];
+								el.style.borderRadius = '4px';
+							} else if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
+								const dotsContainer = document.createElement('div');
+								const isBefore = this.settings.colorStrategy === 'before-text';
+								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'}`;
+
+								matchedColors.slice(0, 3).forEach((color, i) => {
+									const dot = document.createElement('div');
+									dot.className = 'tag-dot';
+									dot.style.backgroundColor = color;
+									
+									if (isBefore) {
+										// Align right relative to the 'before' container
+										dot.style.right = `${-16 + (i * 5)}px`; 
+									} else {
+										dot.style.right = `${10 + (i * 5)}px`; 
+									}
+									
+									dot.style.zIndex = `${20 - i}`;
+									dotsContainer.appendChild(dot);
+								});
+								el.appendChild(dotsContainer);
+							}
+						}
+					}
+				});
+			});
+			this.isUpdating = false;
+		});
+	}
+}
+
+class TagsColorFilesSettingTab extends PluginSettingTab {
+	plugin: TagsColorFilesPlugin;
+	draggingIndex: number | null = null;
+
+	constructor(app: App, plugin: TagsColorFilesPlugin) { 
+		super(app, plugin); 
+		this.plugin = plugin; 
+	}
+
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
+
+		containerEl.createEl('h2', { text: t('SETTINGS_TITLE') });
+		containerEl.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
+
+		containerEl.createEl('h3', { text: t('GENERAL_SECTION') });
+
+		new Setting(containerEl)
+			.setName(t('COLOR_METHOD_NAME'))
+			.setDesc(t('COLOR_METHOD_DESC'))
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption('text', t('COLOR_TEXT'))
+					.addOption('background', t('COLOR_BG'))
+					.addOption('before-text', t('COLOR_DOTS_BEFORE'))
+					.addOption('after-text', t('COLOR_DOTS_AFTER'))
+					.setValue(this.plugin.settings.colorStrategy)
+					.onChange(async (value: 'text' | 'background' | 'before-text' | 'after-text') => {
+						this.plugin.settings.colorStrategy = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t('BACKUP_RESTORE'))
+			.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(() => {
+				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+				const blob = new Blob([data], { type: 'application/json' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url; a.download = `tags-color-settings.json`; a.click();
+				URL.revokeObjectURL(url);
+				new Notice(t('EXPORTED'));
+			}))
+			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
+				const input = document.createElement('input');
+				input.type = 'file'; input.accept = '.json';
+				input.onchange = async (e: any) => {
+					const file = e.target.files[0];
+					if (!file) return;
+					const reader = new FileReader();
+					reader.onload = async (event: any) => {
+						try {
+							const parsed = JSON.parse(event.target.result);
+							if (Array.isArray(parsed)) {
+								this.plugin.settings.tagColors = parsed;
+								await this.plugin.saveSettings(); this.display();
+								new Notice(t('IMPORTED'));
+							}
+						} catch (err) { new Notice(t('INVALID_FILE')); }
+					};
+					reader.readAsText(file);
+				};
+				input.click();
+			}));
+
+		containerEl.createEl('hr');
+		containerEl.createEl('h3', { text: t('RULES_SECTION') });
+
+		new Setting(containerEl)
+			.setName(t('ADD_RULE_NAME'))
+			.setDesc(t('ADD_RULE_DESC'))
+			.addButton((btn) => btn
+				.setButtonText(t('ADD_RULE_BTN'))
+				.setCta()
+				.onClick(async () => {
+					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
+					this.display();
+				})
+			);
+
+		const rulesContainer = containerEl.createDiv({ cls: 'tag-rules-list' });
+
+		this.plugin.settings.tagColors.forEach((config, index) => {
+			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
+			div.draggable = true;
+
+			// Drag and drop listeners
+			div.addEventListener('dragstart', (e) => { this.draggingIndex = index; div.addClass('is-dragging'); });
+			div.addEventListener('dragend', () => { this.draggingIndex = null; div.removeClass('is-dragging'); this.display(); });
+			div.addEventListener('dragover', (e) => { e.preventDefault(); div.addClass('drag-over'); });
+			div.addEventListener('dragleave', () => div.removeClass('drag-over'));
+			div.addEventListener('drop', async (e) => {
+				e.preventDefault();
+				if (this.draggingIndex === null || this.draggingIndex === index) return;
+				const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+				this.plugin.settings.tagColors.splice(index, 0, movedItem);
+				await this.plugin.saveSettings();
+				this.display();
+			});
+
+			// Components
+			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
+			setIcon(dragHandle, 'lucide-grip-vertical');
+
+			const cp = document.createElement('input');
+			cp.type = 'color'; 
+			cp.value = config.color;
+			cp.addClass('tag-color-picker-input');
+			cp.onchange = async (e: any) => { config.color = e.target.value; await this.plugin.saveSettings(); };
+			div.appendChild(cp);
+
+			const txt = document.createElement('input');
+			txt.type = 'text'; 
+			txt.value = config.tag;
+			txt.placeholder = t('TAG_PLACEHOLDER');
+			txt.onchange = async (e: any) => { config.tag = e.target.value; await this.plugin.saveSettings(); };
+			div.appendChild(txt);
+
+			const del = div.createEl('button', { cls: 'clickable-icon' });
+			setIcon(del, 'trash');
+			del.onclick = async () => {
+				this.plugin.settings.tagColors.splice(index, 1);
+				await this.plugin.saveSettings(); this.display();
+			};
+		});
+	}
+}

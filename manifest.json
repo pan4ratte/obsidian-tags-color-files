@@ -1,0 +1,10 @@
+{
+	"id": "tags-color-files",
+	"name": "Tags Color Files",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Colors files in the Obsidian explorer based on their tags.",
+	"author": "pan4ratte",
+	"authorUrl": "https://github.com/pan4ratte/obsidian-tags-color-files",
+	"isDesktopOnly": false
+}

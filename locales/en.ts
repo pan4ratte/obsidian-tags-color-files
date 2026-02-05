@@ -1,0 +1,22 @@
+export default {
+    SETTINGS_TITLE: 'Tags Color Files Settings',
+    PLUGIN_DESCRIPTION: 'Tags Color Files highlights files in the Obsidian file explorer based on rules you define. When a tag with a corresponding rule is added to a file, it automatically changes to the specified color.',
+    GENERAL_SECTION: 'General',
+    COLOR_METHOD_NAME: 'Coloring Method',
+    COLOR_METHOD_DESC: 'When "Dots Before Text" is selected, multiple colors can be displayed simultaneously.',
+    COLOR_TEXT: 'Text',
+    COLOR_BG: 'Background',
+    COLOR_DOTS_BEFORE: 'Dots Before Text',
+    COLOR_DOTS_AFTER: 'Dots After Text',
+    BACKUP_RESTORE: 'Backup & Restore',
+    EXPORT: 'Export Settings',
+    IMPORT: 'Import Settings',
+    EXPORTED: 'Exported successfully!',
+    IMPORTED: 'Imported successfully!',
+    INVALID_FILE: 'Error: Invalid file',
+    RULES_SECTION: 'Coloring Rules',
+    ADD_RULE_NAME: 'Add Coloring Rule',
+    ADD_RULE_DESC: 'Enter a tag and choose a highlight color. Note: If a file has multiple tags with rules, the priority is determined by the order in this list.',
+    ADD_RULE_BTN: 'New Rule',
+    TAG_PLACEHOLDER: '#tag'
+};
