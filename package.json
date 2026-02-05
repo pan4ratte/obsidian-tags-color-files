@@ -1,6 +1,6 @@
 {
   "name": "tags-color-files",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Colors files in the file explorer based on their tags.",
   "main": "main.js",
   "scripts": {
