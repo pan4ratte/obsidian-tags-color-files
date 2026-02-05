@@ -1,6 +1,6 @@
 {
   "name": "tags-color-files",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Colors files in the file explorer based on their tags.",
   "main": "main.js",
   "scripts": {
@@ -8,16 +8,28 @@
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
   },
   "keywords": [],
-  "author": "",
-  "license": "MIT",
+  "author": "pan4ratte",
+  "license": "AGPL-3.0",
   "devDependencies": {
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",
     "builtin-modules": "^3.3.0",
     "esbuild": "0.17.3",
-    "obsidian": "^1.7.2",
+    "obsidian": "^1.11.4",
+    "ts-loader": "^9.5.4",
     "tslib": "2.4.0",
-    "typescript": "4.7.4"
-  }
+    "typescript": "^4.7.4",
+    "webpack": "^5.105.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pan4ratte/obsidian-tags-color-files.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pan4ratte/obsidian-tags-color-files/issues"
+  },
+  "homepage": "https://github.com/pan4ratte/obsidian-tags-color-files#readme"
 }
