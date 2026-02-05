@@ -8,7 +8,7 @@ import {
 	Notice,
 	setIcon
 } from 'obsidian';
-import { t } from './i18n';
+import { t } from './locales-list';
 
 interface TagColorConfig {
 	tag: string;
