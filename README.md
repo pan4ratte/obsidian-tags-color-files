@@ -1,6 +1,6 @@
 # Tags Color Files Plugin
 
-English | Русский
+English | [Русский](https://github.com/pan4ratte/obsidian-tags-color-files/blob/main/README_RU.md)
 
 This plugin allows you to automatically highlight files in your Obsidian explorer with different colors based on the tags they contain. File colors are determined by rules that you create in the plugin settings by entering a tag and assigning a color to it. After adding a tag for which a rule has been created to a file, that file is colored accordingly in the Obsidian explorer.
 
@@ -35,3 +35,4 @@ I am open to suggestions and new ideas that expand the plugin's functionality. H
 
 
 4. To improve the user experience, it would be nice to add suggestions while typing a tag when creating a new rule.
+
