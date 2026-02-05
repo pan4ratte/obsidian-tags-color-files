@@ -1,7 +1,7 @@
 {
 	"id": "tags-color-files",
 	"name": "Tags Color Files",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Colors files in the file explorer based on their tags.",
 	"author": "pan4ratte",
@@ -9,3 +9,4 @@
 	"isDesktopOnly": false
 
 }
+
