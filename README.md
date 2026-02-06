@@ -7,33 +7,35 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 ## Features
 
-1. Create rules for coloring files based on the tag-color principle.
+1. Automatic file highlighting in the Obsidian file explorer based on the tag-color rules that you create.
 
-2. Prioritize tags by changing their order in the settings by dragging and dropping. If a file contains several tags for which rules have been created, the plugin will select the tag with the highest priority to color that file.
+2. Tag prioritization in the plugin settings by dragging and dropping. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
-3. Choose the coloring method: text, background, colored dots before the file name, or colored dots after the file name. When choosing the options before or after the text, up to three colored dots are displayed simultaneously if a single file contains multiple tags for which coloring rules have been created.
+3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots Before Text" and "Dots After Text". When choosing advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
-4. Export and import plugin settings to a file.
+4. Export and import of plugin settings to a file.
 
-5. Localization support. Currently available languages: English, Russian.
+5. Localization support. Currently available languages: English and Russian.
 
 
 ## Plugin Use Case
 
-Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with tags such as `#key-idea` or `#disagree` when I want to highlight relevant thoughts. It is convenient for me to see such quotes in the Obsidian explorer without having to filter by tags through the search function. This plugin solves exactly that problem.
+Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, and I can imagine that there could be much more creative use cases for it.
 
 
-## Known Issues and Contribution
+## Contributions and Roadmap
 
-I am open to suggestions and new ideas that expand the plugin's functionality. Here are a few ideas:
+I am open to suggestions and new ideas that expand the plugin's functionality. Below are some planned updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
 
-1. This plugin was almost entirely vibecoded. Considering this, the plugin requires a full code audit for cleanup and optimization.
+- [ ] Complete code audit. This plugin was almost entirely vibecoded and there should be done a lot of cleanup and optimization.
 
-2. The “Dots Before text” and “Dots After Text” coloring methods are currently poorly integrated into the explorer interface. The code needs to be updated so that these coloring methods do not conflict with other interface elements.
+- [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
-3. A mechanism needs to be developed to prevent the creation of two rules for the same tag.
+- [ ] Prevention of creation of two rules for the same tag.
+
+- [ ] Suggestions of existing tags while creating a new rule.
 
 
-4. To improve the user experience, it would be nice to add suggestions while typing a tag when creating a new rule.
+## About Author
 
-
+My name is Mark Ingram (Ingrem), and I am a religious studies scholar. Apart from my main direction of research (Protestant Political Theology in Russia), I teach the subject "Information Technologies in Scientific Research", a unique course developed by me. This plugin helps me in my studies and I use it in my teaching. Hello to every student that came across this page!
