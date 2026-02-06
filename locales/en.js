@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = {
+    SETTINGS_TITLE: 'Tags Color Files Settings',
+    PLUGIN_DESCRIPTION: 'Tags Color Files highlights files in your Obsidian file explorer based on predefined coloring rules. When you add a tag that has a corresponding coloring rule to a file, the plugin automatically highlights that file in the file explorer with predefined color.',
+    GENERAL_SECTION: 'General',
+    COLOR_METHOD_NAME: 'Coloring Method',
+    COLOR_METHOD_DESC: 'If "Dots Before Text" or "Dots After Text" is selected, multiple colored dots will be displayed simultaneously if the file has more that one tag with predefined coloring rule.',
+    COLOR_TEXT: 'Text',
+    COLOR_BG: 'Background',
+    COLOR_DOTS_BEFORE: 'Dots Before Text',
+    COLOR_DOTS_AFTER: 'Dots After Text',
+    BACKUP_RESTORE: 'Backup & Restore',
+    EXPORT: 'Export Settings',
+    IMPORT: 'Import Settings',
+    EXPORTED: 'Exported successfully!',
+    IMPORTED: 'Imported successfully!',
+    INVALID_FILE: 'Error: Invalid file',
+    RULES_SECTION: 'Coloring Rules',
+    ADD_RULE_NAME: 'Add Coloring Rule',
+    ADD_RULE_DESC: 'Enter a tag and choose a highlight color. Note: If a file has multiple tags with rules, the priority is determined by the order in this list.',
+    ADD_RULE_BTN: 'New Rule',
+    TAG_PLACEHOLDER: '#tag'
+};
