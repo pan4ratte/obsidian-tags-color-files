@@ -1,9 +1,9 @@
 export default {
     SETTINGS_TITLE: 'Tags Color Files Settings',
-    PLUGIN_DESCRIPTION: 'Tags Color Files highlights files in the Obsidian file explorer based on rules you define. When a tag with a corresponding rule is added to a file, it automatically changes to the specified color.',
+    PLUGIN_DESCRIPTION: 'Tags Color Files highlights files in your Obsidian file explorer based on predefined coloring rules. When you add a tag that has a corresponding coloring rule to a file, the plugin automatically highlights that file in the file explorer with predefined color.',
     GENERAL_SECTION: 'General',
     COLOR_METHOD_NAME: 'Coloring Method',
-    COLOR_METHOD_DESC: 'When "Dots Before Text" is selected, multiple colors can be displayed simultaneously.',
+    COLOR_METHOD_DESC: 'If "Dots Before Text" or "Dots After Text" is selected, multiple colored dots will be displayed simultaneously if the file has more that one tag with predefined coloring rule.',
     COLOR_TEXT: 'Text',
     COLOR_BG: 'Background',
     COLOR_DOTS_BEFORE: 'Dots Before Text',
