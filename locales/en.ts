@@ -21,7 +21,7 @@ export default {
     INVALID_FILE: 'Error: Invalid file',
     RULES_SECTION: 'Coloring Rules',
     ADD_RULE_NAME: 'Add Coloring Rule',
-    ADD_RULE_DESC: 'Enter a tag and choose a highlight color. Note: If a file has multiple tags with rules, the priority is determined by the order in this list.',
+    ADD_RULE_DESC: 'Enter a tag and choose a highlight color. If a file has multiple tags for which there is a rule, the highest priority rule is picked for coloring: rules at the top of the list have the highest priority.',
     ADD_RULE_BTN: 'New Rule',
     TAG_PLACEHOLDER: 'Enter a tag (case-insensitive)',
     DUPLICATE_TAG_ERROR: 'There is already a rule for this tag! Choose another tag.'
