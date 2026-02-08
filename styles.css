@@ -38,16 +38,27 @@
 .tag-rules-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
+    margin-top: 16px;
 }
 
 .tag-color-setting-item {
     display: flex !important;
-    align-items: center !important;
+    align-items: center;
     gap: 10px !important;
     margin-bottom: 8px;
+    margin-top: 8px;
     padding: 4px !important;
+    border: 2px solid transparent; 
+}
+
+.tag-input-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.tag-input-field-wrapper {
+    width: 100%;
 }
 
 .tag-color-picker-input {
@@ -78,21 +89,42 @@
 }
 
 .tag-color-setting-item input[type="text"] {
-    flex: 1 1 auto !important;
-    height: 30px !important;
+    width: 100% !important;
+}
+
+.tag-color-setting-item input[type="text"].is-invalid {
+    border: 1px solid var(--text-error) !important;
+}
+
+.tag-error-message {
+    color: var(--text-error);
+    font-size: 0.75em;
+    display: none;
+    line-height: 1.2;
+    margin-top: 8px;
+    margin-left: 8px;
+    margin-bottom: -21.5px;
+}
+
+.tag-error-message.is-visible {
+    display: block;
+    margin-top: 8px;
+    margin-left: 8px;
+    margin-bottom: -21.5px;
 }
 
 .drag-handle {
     color: var(--text-muted);
     cursor: grab;
     flex: 0 0 auto;
+    margin-top: 6px;
+    margin-bottom: 6px;
 }
 
 .tag-color-setting-item.is-dragging {
-    opacity: 0.3;
+    opacity: 1;
     background-color: var(--background-modifier-hover);
-}
-
-.tag-color-setting-item.drag-over {
-    border-top: 2px solid var(--interactive-accent);
+    border-radius: var(--input-radius);
+/*  box-shadow: 0 0 8px var(--interactive-accent); */
+    border-bottom: 2px solid var(--interactive-accent) !important;
 }

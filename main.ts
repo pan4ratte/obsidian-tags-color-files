@@ -18,10 +18,8 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		// Cast metadataCache to any to access the internal getTags() method
 		const allTags = Object.keys((this.app.metadataCache as any).getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
-		
 		return allTags.filter(tag => tag.toLowerCase().contains(normalizedQuery));
 	}
 
@@ -121,39 +119,30 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 	updateFileColors() {
 		if (this.isUpdating) return;
-
 		window.requestAnimationFrame(() => {
 			this.isUpdating = true;
 			const fileExplorers = this.app.workspace.getLeavesOfType('file-explorer');
-			
 			fileExplorers.forEach((leaf) => {
 				const navFiles = leaf.view.containerEl.querySelectorAll('.nav-file-title');
-
 				navFiles.forEach((el: HTMLElement) => {
 					const path = el.getAttribute('data-path');
 					if (!path) return;
-
 					const file = this.app.vault.getAbstractFileByPath(path);
 					if (file instanceof TFile) {
 						const cache = this.app.metadataCache.getFileCache(file);
 						const fileTags = getAllTags(cache);
-
 						this.cleanElement(el);
-
 						if (!fileTags || this.settings.tagColors.length === 0) return;
-
 						const matchedColors: string[] = [];
 						for (const config of this.settings.tagColors) {
 							if (!config.tag) continue;
-							const normalizeConfigTag = config.tag.startsWith('#') ? config.tag : '#' + config.tag;
-							if (fileTags.some(t => t.toLowerCase() === normalizeConfigTag.toLowerCase())) {
+							const normalizedConfig = config.tag.replace(/^#/, '').toLowerCase();
+							if (fileTags.some(t => t.replace(/^#/, '').toLowerCase() === normalizedConfig)) {
 								matchedColors.push(config.color);
 							}
 						}
-
 						if (matchedColors.length > 0) {
 							el.classList.add('colored-tag-file');
-							
 							if (this.settings.colorStrategy === 'text') {
 								el.style.color = matchedColors[0];
 							} else if (this.settings.colorStrategy === 'background') {
@@ -162,24 +151,16 @@ export default class TagsColorFilesPlugin extends Plugin {
 							} else if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
 								const dotsContainer = document.createElement('div');
 								const isBefore = this.settings.colorStrategy === 'before-text';
-								
 								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
-
 								let spacing = 4.5; 
 								if (this.settings.dotSize === 'small') spacing = 4;
 								else if (this.settings.dotSize === 'big') spacing = 5;
-
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = document.createElement('div');
 									dot.className = 'tag-dot';
 									dot.style.backgroundColor = color;
-									
-									if (isBefore) {
-										dot.style.right = `${-16 + (i * spacing)}px`; 
-									} else {
-										dot.style.right = `${10 + (i * spacing)}px`; 
-									}
-									
+									if (isBefore) dot.style.right = `${-16 + (i * spacing)}px`; 
+									else dot.style.right = `${10 + (i * spacing)}px`; 
 									dot.style.zIndex = `${20 - i}`;
 									dotsContainer.appendChild(dot);
 								});
@@ -198,6 +179,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	plugin: TagsColorFilesPlugin;
 	draggingIndex: number | null = null;
 	lastCreatedInput: HTMLInputElement | null = null;
+	ruleElements: { txt: HTMLInputElement, error: HTMLElement }[] = [];
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) { 
 		super(app, plugin); 
@@ -207,10 +189,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		this.ruleElements = [];
 
 		containerEl.createEl('h2', { text: t('SETTINGS_TITLE') });
 		containerEl.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
-
 		containerEl.createEl('h3', { text: t('GENERAL_SECTION') });
 
 		new Setting(containerEl)
@@ -223,7 +205,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.addOption('before-text', t('COLOR_DOTS_BEFORE'))
 					.addOption('after-text', t('COLOR_DOTS_AFTER'))
 					.setValue(this.plugin.settings.colorStrategy)
-					.onChange(async (value: 'text' | 'background' | 'before-text' | 'after-text') => {
+					.onChange(async (value: any) => {
 						this.plugin.settings.colorStrategy = value;
 						await this.plugin.saveSettings();
 						this.display();
@@ -240,7 +222,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						.addOption('default', t('DOT_DEFAULT'))
 						.addOption('big', t('DOT_BIG'))
 						.setValue(this.plugin.settings.dotSize)
-						.onChange(async (value: 'small' | 'default' | 'big') => {
+						.onChange(async (value: any) => {
 							this.plugin.settings.dotSize = value;
 							await this.plugin.saveSettings();
 						});
@@ -292,10 +274,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
 					this.display();
-					// Focus on the newly created input
-					if (this.lastCreatedInput) {
-						this.lastCreatedInput.focus();
-					}
+					if (this.lastCreatedInput) this.lastCreatedInput.focus();
 				})
 			);
 
@@ -303,20 +282,37 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		this.plugin.settings.tagColors.forEach((config, index) => {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
+			
+			// If this item is currently being dragged, maintain the class across re-renders
+			if (this.draggingIndex === index) {
+				div.addClass('is-dragging');
+			}
+
 			div.draggable = true;
 
-			div.addEventListener('dragstart', (e) => { this.draggingIndex = index; div.addClass('is-dragging'); });
-			div.addEventListener('dragend', () => { this.draggingIndex = null; div.removeClass('is-dragging'); this.display(); });
-			div.addEventListener('dragover', (e) => { e.preventDefault(); div.addClass('drag-over'); });
-			div.addEventListener('dragleave', () => div.removeClass('drag-over'));
-			div.addEventListener('drop', async (e) => {
-				e.preventDefault();
-				if (this.draggingIndex === null || this.draggingIndex === index) return;
-				const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-				this.plugin.settings.tagColors.splice(index, 0, movedItem);
-				await this.plugin.saveSettings();
-				this.display();
+			div.addEventListener('dragstart', () => { 
+				this.draggingIndex = index; 
+				div.addClass('is-dragging'); 
 			});
+
+			div.addEventListener('dragend', () => { 
+				this.draggingIndex = null; 
+				div.removeClass('is-dragging'); 
+				this.display(); 
+			});
+
+			div.addEventListener('dragover', async (e) => {
+				e.preventDefault();
+				if (this.draggingIndex !== null && this.draggingIndex !== index) {
+					const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+					this.plugin.settings.tagColors.splice(index, 0, movedItem);
+					this.draggingIndex = index; 
+					await this.plugin.saveSettings();
+					this.display();
+				}
+			});
+
+			div.addEventListener('drop', (e) => { e.preventDefault(); });
 
 			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
 			setIcon(dragHandle, 'lucide-grip-vertical');
@@ -328,21 +324,51 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cp.onchange = async (e: any) => { config.color = e.target.value; await this.plugin.saveSettings(); };
 			div.appendChild(cp);
 
+			const inputContainer = div.createDiv({ cls: 'tag-input-container' });
+			const fieldWrapper = inputContainer.createDiv({ cls: 'tag-input-field-wrapper' });
+			
 			const txt = document.createElement('input');
 			txt.type = 'text'; 
 			txt.value = config.tag;
 			txt.placeholder = t('TAG_PLACEHOLDER');
-			
-			// Store reference for autofocus if it's the first item (since we use unshift)
-			if (index === 0) {
-				this.lastCreatedInput = txt;
-			}
+			if (index === 0) this.lastCreatedInput = txt;
+			fieldWrapper.appendChild(txt);
+
+			const errorMsg = inputContainer.createEl('div', { 
+				cls: 'tag-error-message', 
+				text: t('DUPLICATE_TAG_ERROR') 
+			});
+
+			this.ruleElements.push({ txt, error: errorMsg });
 
 			new TagSuggest(this.app, txt);
 
-			txt.onchange = async (e: any) => { config.tag = e.target.value; await this.plugin.saveSettings(); };
+			const validateAllTags = () => {
+				const tagCounts: { [key: string]: number } = {};
+				this.ruleElements.forEach(el => {
+					const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+					if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
+				});
+
+				this.ruleElements.forEach(el => {
+					const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+					if (val && tagCounts[val] > 1) {
+						el.txt.addClass('is-invalid');
+						el.error.addClass('is-visible');
+					} else {
+						el.txt.removeClass('is-invalid');
+						el.error.removeClass('is-visible');
+					}
+				});
+			};
+
+			txt.oninput = validateAllTags;
+			txt.onchange = async (e: any) => { 
+				config.tag = e.target.value; 
+				validateAllTags();
+				await this.plugin.saveSettings(); 
+			};
 			
-			// Auto-delete if empty on blur
 			txt.addEventListener('blur', async () => {
 				if (!txt.value || txt.value.trim() === '') {
 					this.plugin.settings.tagColors.splice(index, 1);
@@ -351,14 +377,28 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				}
 			});
 
-			div.appendChild(txt);
-
 			const del = div.createEl('button', { cls: 'clickable-icon' });
 			setIcon(del, 'trash');
 			del.onclick = async () => {
 				this.plugin.settings.tagColors.splice(index, 1);
-				await this.plugin.saveSettings(); this.display();
+				await this.plugin.saveSettings(); 
+				this.display();
 			};
 		});
+		
+		if (this.ruleElements.length > 0) {
+			const tagCounts: { [key: string]: number } = {};
+			this.ruleElements.forEach(el => {
+				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+				if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
+			});
+			this.ruleElements.forEach(el => {
+				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+				if (val && tagCounts[val] > 1) {
+					el.txt.addClass('is-invalid');
+					el.error.addClass('is-visible');
+				}
+			});
+		}
 	}
 }

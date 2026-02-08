@@ -58,7 +58,8 @@ var en_default = {
   ADD_RULE_NAME: "Add Coloring Rule",
   ADD_RULE_DESC: "Enter a tag and choose a highlight color. Note: If a file has multiple tags with rules, the priority is determined by the order in this list.",
   ADD_RULE_BTN: "New Rule",
-  TAG_PLACEHOLDER: "#tag"
+  TAG_PLACEHOLDER: "Enter a tag (case-insensitive)",
+  DUPLICATE_TAG_ERROR: "There is already a rule for this tag! Choose another tag."
 };
 
 // locales/ru.ts
@@ -85,9 +86,10 @@ var ru_default = {
   INVALID_FILE: "\u041E\u0448\u0438\u0431\u043A\u0430: \u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u0444\u0430\u0439\u043B",
   RULES_SECTION: "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F",
   ADD_RULE_NAME: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F",
-  ADD_RULE_DESC: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u0433 \u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u043E\u0432. \u041F\u043B\u0430\u0433\u0438\u043D \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0435 \u0442\u0435\u0433\u0438 \u043F\u0440\u0438 \u0432\u0432\u043E\u0434\u0435.",
+  ADD_RULE_DESC: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u0433 \u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u043E\u0432. \u041E\u0431\u0440\u0430\u0442\u0438\u0442\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435: \u0415\u0441\u043B\u0438 \u043A \u0444\u0430\u0439\u043B\u0443 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u0433\u043E\u0432, \u0434\u043B\u044F \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u043E, \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u043D\u044B\u0439.",
   ADD_RULE_BTN: "\u041D\u043E\u0432\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E",
-  TAG_PLACEHOLDER: "#\u0442\u0435\u0433"
+  TAG_PLACEHOLDER: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u0433 (\u0440\u0435\u0433\u0438\u0441\u0442\u0440 \u043D\u0435 \u0443\u0447\u0438\u0442\u044B\u0432\u0430\u0435\u0442\u0441\u044F)",
+  DUPLICATE_TAG_ERROR: "\u0414\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0442\u0435\u0433\u0430 \u0443\u0436\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442 \u043F\u0440\u0430\u0432\u0438\u043B\u043E! \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0439 \u0442\u0435\u0433"
 };
 
 // locales-list.ts
@@ -212,8 +214,8 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
             for (const config of this.settings.tagColors) {
               if (!config.tag)
                 continue;
-              const normalizeConfigTag = config.tag.startsWith("#") ? config.tag : "#" + config.tag;
-              if (fileTags.some((t2) => t2.toLowerCase() === normalizeConfigTag.toLowerCase())) {
+              const normalizedConfig = config.tag.replace(/^#/, "").toLowerCase();
+              if (fileTags.some((t2) => t2.replace(/^#/, "").toLowerCase() === normalizedConfig)) {
                 matchedColors.push(config.color);
               }
             }
@@ -237,11 +239,10 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
                   const dot = document.createElement("div");
                   dot.className = "tag-dot";
                   dot.style.backgroundColor = color;
-                  if (isBefore) {
+                  if (isBefore)
                     dot.style.right = `${-16 + i * spacing}px`;
-                  } else {
+                  else
                     dot.style.right = `${10 + i * spacing}px`;
-                  }
                   dot.style.zIndex = `${20 - i}`;
                   dotsContainer.appendChild(dot);
                 });
@@ -260,11 +261,13 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     super(app, plugin);
     this.draggingIndex = null;
     this.lastCreatedInput = null;
+    this.ruleElements = [];
     this.plugin = plugin;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    this.ruleElements = [];
     containerEl.createEl("h2", { text: t("SETTINGS_TITLE") });
     containerEl.createEl("p", { text: t("PLUGIN_DESCRIPTION"), cls: "setting-item-description" });
     containerEl.createEl("h3", { text: t("GENERAL_SECTION") });
@@ -325,16 +328,18 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       (btn) => btn.setButtonText(t("ADD_RULE_BTN")).setCta().onClick(async () => {
         this.plugin.settings.tagColors.unshift({ tag: "", color: "#4a90e2" });
         this.display();
-        if (this.lastCreatedInput) {
+        if (this.lastCreatedInput)
           this.lastCreatedInput.focus();
-        }
       })
     );
     const rulesContainer = containerEl.createDiv({ cls: "tag-rules-list" });
     this.plugin.settings.tagColors.forEach((config, index) => {
       const div = rulesContainer.createDiv({ cls: "tag-color-setting-item" });
+      if (this.draggingIndex === index) {
+        div.addClass("is-dragging");
+      }
       div.draggable = true;
-      div.addEventListener("dragstart", (e) => {
+      div.addEventListener("dragstart", () => {
         this.draggingIndex = index;
         div.addClass("is-dragging");
       });
@@ -343,19 +348,18 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         div.removeClass("is-dragging");
         this.display();
       });
-      div.addEventListener("dragover", (e) => {
+      div.addEventListener("dragover", async (e) => {
         e.preventDefault();
-        div.addClass("drag-over");
+        if (this.draggingIndex !== null && this.draggingIndex !== index) {
+          const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+          this.plugin.settings.tagColors.splice(index, 0, movedItem);
+          this.draggingIndex = index;
+          await this.plugin.saveSettings();
+          this.display();
+        }
       });
-      div.addEventListener("dragleave", () => div.removeClass("drag-over"));
-      div.addEventListener("drop", async (e) => {
+      div.addEventListener("drop", (e) => {
         e.preventDefault();
-        if (this.draggingIndex === null || this.draggingIndex === index)
-          return;
-        const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-        this.plugin.settings.tagColors.splice(index, 0, movedItem);
-        await this.plugin.saveSettings();
-        this.display();
       });
       const dragHandle = div.createEl("div", { cls: "clickable-icon drag-handle" });
       (0, import_obsidian2.setIcon)(dragHandle, "lucide-grip-vertical");
@@ -368,16 +372,43 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         await this.plugin.saveSettings();
       };
       div.appendChild(cp);
+      const inputContainer = div.createDiv({ cls: "tag-input-container" });
+      const fieldWrapper = inputContainer.createDiv({ cls: "tag-input-field-wrapper" });
       const txt = document.createElement("input");
       txt.type = "text";
       txt.value = config.tag;
       txt.placeholder = t("TAG_PLACEHOLDER");
-      if (index === 0) {
+      if (index === 0)
         this.lastCreatedInput = txt;
-      }
+      fieldWrapper.appendChild(txt);
+      const errorMsg = inputContainer.createEl("div", {
+        cls: "tag-error-message",
+        text: t("DUPLICATE_TAG_ERROR")
+      });
+      this.ruleElements.push({ txt, error: errorMsg });
       new TagSuggest(this.app, txt);
+      const validateAllTags = () => {
+        const tagCounts = {};
+        this.ruleElements.forEach((el) => {
+          const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
+          if (val)
+            tagCounts[val] = (tagCounts[val] || 0) + 1;
+        });
+        this.ruleElements.forEach((el) => {
+          const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
+          if (val && tagCounts[val] > 1) {
+            el.txt.addClass("is-invalid");
+            el.error.addClass("is-visible");
+          } else {
+            el.txt.removeClass("is-invalid");
+            el.error.removeClass("is-visible");
+          }
+        });
+      };
+      txt.oninput = validateAllTags;
       txt.onchange = async (e) => {
         config.tag = e.target.value;
+        validateAllTags();
         await this.plugin.saveSettings();
       };
       txt.addEventListener("blur", async () => {
@@ -387,7 +418,6 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
           this.display();
         }
       });
-      div.appendChild(txt);
       const del = div.createEl("button", { cls: "clickable-icon" });
       (0, import_obsidian2.setIcon)(del, "trash");
       del.onclick = async () => {
@@ -396,5 +426,20 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         this.display();
       };
     });
+    if (this.ruleElements.length > 0) {
+      const tagCounts = {};
+      this.ruleElements.forEach((el) => {
+        const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
+        if (val)
+          tagCounts[val] = (tagCounts[val] || 0) + 1;
+      });
+      this.ruleElements.forEach((el) => {
+        const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
+        if (val && tagCounts[val] > 1) {
+          el.txt.addClass("is-invalid");
+          el.error.addClass("is-visible");
+        }
+      });
+    }
   }
 };

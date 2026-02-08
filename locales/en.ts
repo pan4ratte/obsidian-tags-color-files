@@ -11,9 +11,9 @@ export default {
     BACKUP_RESTORE: 'Backup & Restore',
     DOT_SIZE_NAME: 'Dots Size',
     DOT_SIZE_DESC: 'Choose the size of dots for "Dots Before/After Text" coloring methods.',
-    DOT_SMALL: 'Smaller',
+    DOT_SMALL: 'Small',
     DOT_DEFAULT: 'Default',
-    DOT_BIG: 'Bigger',
+    DOT_BIG: 'Big',
     EXPORT: 'Export Settings',
     IMPORT: 'Import Settings',
     EXPORTED: 'Exported successfully!',
@@ -23,5 +23,6 @@ export default {
     ADD_RULE_NAME: 'Add Coloring Rule',
     ADD_RULE_DESC: 'Enter a tag and choose a highlight color. Note: If a file has multiple tags with rules, the priority is determined by the order in this list.',
     ADD_RULE_BTN: 'New Rule',
-    TAG_PLACEHOLDER: '#tag'
+    TAG_PLACEHOLDER: 'Enter a tag (case-insensitive)',
+    DUPLICATE_TAG_ERROR: 'There is already a rule for this tag! Choose another tag.'
 };
