@@ -6,9 +6,35 @@ import {
 	TFile,
 	getAllTags,
 	Notice,
-	setIcon
+	setIcon,
+	AbstractInputSuggest
 } from 'obsidian';
 import { t } from './locales-list';
+
+// Helper class for tag suggestions
+class TagSuggest extends AbstractInputSuggest<string> {
+	constructor(app: App, public inputEl: HTMLInputElement) {
+		super(app, inputEl);
+	}
+
+	getSuggestions(query: string): string[] {
+		// Cast metadataCache to any to access the internal getTags() method
+		const allTags = Object.keys((this.app.metadataCache as any).getTags());
+		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
+		
+		return allTags.filter(tag => tag.toLowerCase().contains(normalizedQuery));
+	}
+
+	renderSuggestion(tag: string, el: HTMLElement): void {
+		el.setText(tag);
+	}
+
+	selectSuggestion(tag: string): void {
+		this.inputEl.value = tag;
+		this.inputEl.trigger("input");
+		this.close();
+	}
+}
 
 interface TagColorConfig {
 	tag: string;
@@ -137,10 +163,8 @@ export default class TagsColorFilesPlugin extends Plugin {
 								const dotsContainer = document.createElement('div');
 								const isBefore = this.settings.colorStrategy === 'before-text';
 								
-								// Apply sizing class for CSS
 								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
 
-								// Set dynamic spacing based on selected size
 								let spacing = 4.5; 
 								if (this.settings.dotSize === 'small') spacing = 4;
 								else if (this.settings.dotSize === 'big') spacing = 5;
@@ -173,6 +197,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 class TagsColorFilesSettingTab extends PluginSettingTab {
 	plugin: TagsColorFilesPlugin;
 	draggingIndex: number | null = null;
+	lastCreatedInput: HTMLInputElement | null = null;
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) { 
 		super(app, plugin); 
@@ -201,11 +226,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.onChange(async (value: 'text' | 'background' | 'before-text' | 'after-text') => {
 						this.plugin.settings.colorStrategy = value;
 						await this.plugin.saveSettings();
-						this.display(); // Refresh to toggle Dot Size setting visibility
+						this.display();
 					});
 			});
 
-		// Dynamic Dot Size Setting
 		if (this.plugin.settings.colorStrategy === 'before-text' || this.plugin.settings.colorStrategy === 'after-text') {
 			new Setting(containerEl)
 				.setName(t('DOT_SIZE_NAME'))
@@ -268,6 +292,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
 					this.display();
+					// Focus on the newly created input
+					if (this.lastCreatedInput) {
+						this.lastCreatedInput.focus();
+					}
 				})
 			);
 
@@ -304,7 +332,25 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			txt.type = 'text'; 
 			txt.value = config.tag;
 			txt.placeholder = t('TAG_PLACEHOLDER');
+			
+			// Store reference for autofocus if it's the first item (since we use unshift)
+			if (index === 0) {
+				this.lastCreatedInput = txt;
+			}
+
+			new TagSuggest(this.app, txt);
+
 			txt.onchange = async (e: any) => { config.tag = e.target.value; await this.plugin.saveSettings(); };
+			
+			// Auto-delete if empty on blur
+			txt.addEventListener('blur', async () => {
+				if (!txt.value || txt.value.trim() === '') {
+					this.plugin.settings.tagColors.splice(index, 1);
+					await this.plugin.saveSettings();
+					this.display();
+				}
+			});
+
 			div.appendChild(txt);
 
 			const del = div.createEl('button', { cls: 'clickable-icon' });

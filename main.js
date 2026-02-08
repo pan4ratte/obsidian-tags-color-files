@@ -44,6 +44,11 @@ var en_default = {
   COLOR_DOTS_BEFORE: "Dots Before Text",
   COLOR_DOTS_AFTER: "Dots After Text",
   BACKUP_RESTORE: "Backup & Restore",
+  DOT_SIZE_NAME: "Dots Size",
+  DOT_SIZE_DESC: 'Choose the size of dots for "Dots Before/After Text" coloring methods.',
+  DOT_SMALL: "Smaller",
+  DOT_DEFAULT: "Default",
+  DOT_BIG: "Bigger",
   EXPORT: "Export Settings",
   IMPORT: "Import Settings",
   EXPORTED: "Exported successfully!",
@@ -80,7 +85,7 @@ var ru_default = {
   INVALID_FILE: "\u041E\u0448\u0438\u0431\u043A\u0430: \u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u0444\u0430\u0439\u043B",
   RULES_SECTION: "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F",
   ADD_RULE_NAME: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F",
-  ADD_RULE_DESC: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u0433 \u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u043E\u0432. \u041E\u0431\u0440\u0430\u0442\u0438\u0442\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435: \u0415\u0441\u043B\u0438 \u043A \u0444\u0430\u0439\u043B\u0443 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u0433\u043E\u0432, \u0434\u043B\u044F \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u0441\u043E\u0437\u0434\u0430\u043D\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u043E, \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u043D\u044B\u0439.",
+  ADD_RULE_DESC: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u0433 \u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u043E\u0432. \u041F\u043B\u0430\u0433\u0438\u043D \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0435 \u0442\u0435\u0433\u0438 \u043F\u0440\u0438 \u0432\u0432\u043E\u0434\u0435.",
   ADD_RULE_BTN: "\u041D\u043E\u0432\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E",
   TAG_PLACEHOLDER: "#\u0442\u0435\u0433"
 };
@@ -98,6 +103,25 @@ var t = (key) => {
 };
 
 // main.ts
+var TagSuggest = class extends import_obsidian2.AbstractInputSuggest {
+  constructor(app, inputEl) {
+    super(app, inputEl);
+    this.inputEl = inputEl;
+  }
+  getSuggestions(query) {
+    const allTags = Object.keys(this.app.metadataCache.getTags());
+    const normalizedQuery = query.startsWith("#") ? query.toLowerCase() : "#" + query.toLowerCase();
+    return allTags.filter((tag) => tag.toLowerCase().contains(normalizedQuery));
+  }
+  renderSuggestion(tag, el) {
+    el.setText(tag);
+  }
+  selectSuggestion(tag) {
+    this.inputEl.value = tag;
+    this.inputEl.trigger("input");
+    this.close();
+  }
+};
 var DEFAULT_SETTINGS = {
   tagColors: [],
   colorStrategy: "text",
@@ -235,6 +259,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.draggingIndex = null;
+    this.lastCreatedInput = null;
     this.plugin = plugin;
   }
   display() {
@@ -300,6 +325,9 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       (btn) => btn.setButtonText(t("ADD_RULE_BTN")).setCta().onClick(async () => {
         this.plugin.settings.tagColors.unshift({ tag: "", color: "#4a90e2" });
         this.display();
+        if (this.lastCreatedInput) {
+          this.lastCreatedInput.focus();
+        }
       })
     );
     const rulesContainer = containerEl.createDiv({ cls: "tag-rules-list" });
@@ -344,10 +372,21 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       txt.type = "text";
       txt.value = config.tag;
       txt.placeholder = t("TAG_PLACEHOLDER");
+      if (index === 0) {
+        this.lastCreatedInput = txt;
+      }
+      new TagSuggest(this.app, txt);
       txt.onchange = async (e) => {
         config.tag = e.target.value;
         await this.plugin.saveSettings();
       };
+      txt.addEventListener("blur", async () => {
+        if (!txt.value || txt.value.trim() === "") {
+          this.plugin.settings.tagColors.splice(index, 1);
+          await this.plugin.saveSettings();
+          this.display();
+        }
+      });
       div.appendChild(txt);
       const del = div.createEl("button", { cls: "clickable-icon" });
       (0, import_obsidian2.setIcon)(del, "trash");
