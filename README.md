@@ -11,7 +11,7 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 2. Tag prioritization in the plugin settings by dragging and dropping. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
-3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots Before Text" and "Dots After Text". When choosing advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
+3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots Before Text" and "Dots After Text". Choice of the dots sizes is also available. When choosing advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
 4. Export and import of plugin settings to a file.
 
@@ -31,15 +31,19 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
-- [x] Prevention of creation of two rules for the same tag.
+- [ ] Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.
 
-- [x] Suggestions of existing tags while creating a new rule.
+- [ ] New coloring method: "Border".
 
-- [x] An option to choose between three sizes for "Dots ..." coloring methods: default, smaller, bigger.
+- [x] ~~Prevention of creation of two rules for the same tag.~~
+
+- [x] ~~Suggestions of existing tags while creating a new rule.~~
+
+- [x] ~~An option to choose between three sizes for "Dots ..." coloring methods: default, smaller, bigger.~~
 
 ### Knows Bugs
 
-- [x] Under certain conditions, dragging and dropping a tag might result in deletion of that tag from the plugin database.
+- [x] ~~Under certain conditions, dragging and dropping a tag might result in deletion of that tag from the plugin database.~~
 
 
 ## About the Author
