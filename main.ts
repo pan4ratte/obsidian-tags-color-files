@@ -18,11 +18,13 @@ interface TagColorConfig {
 interface TagsColorFilesSettings {
 	tagColors: TagColorConfig[];
 	colorStrategy: 'text' | 'background' | 'before-text' | 'after-text';
+	dotSize: 'small' | 'default' | 'big';
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	tagColors: [],
-	colorStrategy: 'text'
+	colorStrategy: 'text',
+	dotSize: 'default'
 };
 
 export default class TagsColorFilesPlugin extends Plugin {
@@ -134,7 +136,14 @@ export default class TagsColorFilesPlugin extends Plugin {
 							} else if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
 								const dotsContainer = document.createElement('div');
 								const isBefore = this.settings.colorStrategy === 'before-text';
-								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'}`;
+								
+								// Apply sizing class for CSS
+								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
+
+								// Set dynamic spacing based on selected size
+								let spacing = 4.5; 
+								if (this.settings.dotSize === 'small') spacing = 4;
+								else if (this.settings.dotSize === 'big') spacing = 5;
 
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = document.createElement('div');
@@ -142,10 +151,9 @@ export default class TagsColorFilesPlugin extends Plugin {
 									dot.style.backgroundColor = color;
 									
 									if (isBefore) {
-										// Align right relative to the 'before' container
-										dot.style.right = `${-16 + (i * 5)}px`; 
+										dot.style.right = `${-16 + (i * spacing)}px`; 
 									} else {
-										dot.style.right = `${10 + (i * 5)}px`; 
+										dot.style.right = `${10 + (i * spacing)}px`; 
 									}
 									
 									dot.style.zIndex = `${20 - i}`;
@@ -193,8 +201,27 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.onChange(async (value: 'text' | 'background' | 'before-text' | 'after-text') => {
 						this.plugin.settings.colorStrategy = value;
 						await this.plugin.saveSettings();
+						this.display(); // Refresh to toggle Dot Size setting visibility
 					});
 			});
+
+		// Dynamic Dot Size Setting
+		if (this.plugin.settings.colorStrategy === 'before-text' || this.plugin.settings.colorStrategy === 'after-text') {
+			new Setting(containerEl)
+				.setName(t('DOT_SIZE_NAME'))
+				.setDesc(t('DOT_SIZE_DESC'))
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption('small', t('DOT_SMALL'))
+						.addOption('default', t('DOT_DEFAULT'))
+						.addOption('big', t('DOT_BIG'))
+						.setValue(this.plugin.settings.dotSize)
+						.onChange(async (value: 'small' | 'default' | 'big') => {
+							this.plugin.settings.dotSize = value;
+							await this.plugin.saveSettings();
+						});
+				});
+		}
 
 		new Setting(containerEl)
 			.setName(t('BACKUP_RESTORE'))
@@ -250,7 +277,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
 			div.draggable = true;
 
-			// Drag and drop listeners
 			div.addEventListener('dragstart', (e) => { this.draggingIndex = index; div.addClass('is-dragging'); });
 			div.addEventListener('dragend', () => { this.draggingIndex = null; div.removeClass('is-dragging'); this.display(); });
 			div.addEventListener('dragover', (e) => { e.preventDefault(); div.addClass('drag-over'); });
@@ -264,7 +290,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				this.display();
 			});
 
-			// Components
 			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
 			setIcon(dragHandle, 'lucide-grip-vertical');
 

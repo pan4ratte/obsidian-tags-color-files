@@ -35,7 +35,7 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Suggestions of existing tags while creating a new rule.
 
-- [ ] An option to choose between three sizes for "Dots ..." coloring methods: default, small, big.
+- [x] An option to choose between three sizes for "Dots ..." coloring methods: default, smaller, bigger.
 
 ### Knows Bugs
 
