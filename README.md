@@ -25,7 +25,7 @@ Initially, the plugin was created for my personal needs. When reading literature
 
 ## Contributions and Roadmap
 
-I am open to suggestions and new ideas that expand the plugin's functionality. Below are some planned updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
+I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
 
 - [ ] Complete code audit. This plugin was almost entirely vibecoded and there should be done a lot of cleanup and optimization.
 
@@ -34,6 +34,12 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 - [ ] Prevention of creation of two rules for the same tag.
 
 - [ ] Suggestions of existing tags while creating a new rule.
+
+- [ ] An option to choose between three sizes for "Dots ..." coloring methods: default, small, big.
+
+### Knows Bugs
+
+- [ ] Under certain conditions, dragging and dropping a tag might result in deletion of that tag from the plugin database.
 
 
 ## About the Author
