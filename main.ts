@@ -19,6 +19,7 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
+		// Casting to access internal getTags method
 		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
 		const allTags = Object.keys(cache.getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
@@ -144,8 +145,6 @@ export default class TagsColorFilesPlugin extends Plugin {
 						if (matchedColors.length > 0) {
 							el.classList.add('colored-tag-file');
 							el.classList.add(`strategy-${this.settings.colorStrategy}`);
-							
-							// Pass the primary color to CSS via a variable
 							el.style.setProperty('--tag-file-color', matchedColors[0]);
 
 							if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
@@ -156,7 +155,6 @@ export default class TagsColorFilesPlugin extends Plugin {
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = document.createElement('div');
 									dot.className = 'tag-dot';
-									// Pass individual dot colors via variables to avoid inline style calculations
 									dot.style.setProperty('--dot-color', color);
 									dot.style.setProperty('--dot-index', i.toString());
 									dotsContainer.appendChild(dot);
@@ -188,12 +186,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		this.ruleElements = [];
 
-		containerEl.createEl('h2', { text: t('SETTINGS_TITLE') });
+		new Setting(containerEl)
+			.setName(t('SETTINGS_TITLE'))
+			.setHeading();
 		
 		const descContainer = containerEl.createDiv({ cls: 'plugin-description-container' });
 		descContainer.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
 		
-		containerEl.createEl('h3', { text: t('GENERAL_SECTION') });
+		new Setting(containerEl)
+			.setName(t('GENERAL_SECTION'))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t('COLOR_METHOD_NAME'))
@@ -243,7 +245,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
 				const input = document.createElement('input');
 				input.type = 'file'; input.accept = '.json';
-				input.onchange = async (e: Event) => {
+				// Fix: Removed 'async' as there is no 'await' in this top-level arrow
+				input.onchange = (e: Event) => {
 					const target = e.target as HTMLInputElement;
 					const file = target.files?.[0];
 					if (!file) return;
@@ -268,7 +271,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			}));
 
 		containerEl.createEl('hr');
-		containerEl.createEl('h3', { text: t('RULES_SECTION') });
+		
+		new Setting(containerEl)
+			.setName(t('RULES_SECTION'))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t('ADD_RULE_NAME'))
@@ -276,7 +282,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.addButton((btn) => btn
 				.setButtonText(t('ADD_RULE_BTN'))
 				.setCta()
-				.onClick(async () => {
+				// Fix: Removed 'async' as there is no 'await' in this arrow
+				.onClick(() => {
 					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
 					this.display();
 					if (this.lastCreatedInput) this.lastCreatedInput.focus();

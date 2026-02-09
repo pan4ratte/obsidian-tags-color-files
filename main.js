@@ -255,10 +255,10 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     this.ruleElements = [];
-    containerEl.createEl("h2", { text: t("SETTINGS_TITLE") });
+    new import_obsidian2.Setting(containerEl).setName(t("SETTINGS_TITLE")).setHeading();
     const descContainer = containerEl.createDiv({ cls: "plugin-description-container" });
     descContainer.createEl("p", { text: t("PLUGIN_DESCRIPTION"), cls: "setting-item-description" });
-    containerEl.createEl("h3", { text: t("GENERAL_SECTION") });
+    new import_obsidian2.Setting(containerEl).setName(t("GENERAL_SECTION")).setHeading();
     new import_obsidian2.Setting(containerEl).setName(t("COLOR_METHOD_NAME")).setDesc(t("COLOR_METHOD_DESC")).addDropdown((dropdown) => {
       dropdown.addOption("text", t("COLOR_TEXT")).addOption("background", t("COLOR_BG")).addOption("before-text", t("COLOR_DOTS_BEFORE")).addOption("after-text", t("COLOR_DOTS_AFTER")).setValue(this.plugin.settings.colorStrategy).onChange(async (value) => {
         this.plugin.settings.colorStrategy = value;
@@ -288,7 +288,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json";
-      input.onchange = async (e) => {
+      input.onchange = (e) => {
         var _a;
         const target = e.target;
         const file = (_a = target.files) == null ? void 0 : _a[0];
@@ -317,9 +317,9 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       input.click();
     }));
     containerEl.createEl("hr");
-    containerEl.createEl("h3", { text: t("RULES_SECTION") });
+    new import_obsidian2.Setting(containerEl).setName(t("RULES_SECTION")).setHeading();
     new import_obsidian2.Setting(containerEl).setName(t("ADD_RULE_NAME")).setDesc(t("ADD_RULE_DESC")).addButton(
-      (btn) => btn.setButtonText(t("ADD_RULE_BTN")).setCta().onClick(async () => {
+      (btn) => btn.setButtonText(t("ADD_RULE_BTN")).setCta().onClick(() => {
         this.plugin.settings.tagColors.unshift({ tag: "", color: "#4a90e2" });
         this.display();
         if (this.lastCreatedInput)
