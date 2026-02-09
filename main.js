@@ -269,7 +269,8 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     containerEl.empty();
     this.ruleElements = [];
     containerEl.createEl("h2", { text: t("SETTINGS_TITLE") });
-    containerEl.createEl("p", { text: t("PLUGIN_DESCRIPTION"), cls: "setting-item-description" });
+    const descContainer = containerEl.createDiv({ cls: "plugin-description-container" });
+    descContainer.createEl("p", { text: t("PLUGIN_DESCRIPTION"), cls: "setting-item-description" });
     containerEl.createEl("h3", { text: t("GENERAL_SECTION") });
     new import_obsidian2.Setting(containerEl).setName(t("COLOR_METHOD_NAME")).setDesc(t("COLOR_METHOD_DESC")).addDropdown((dropdown) => {
       dropdown.addOption("text", t("COLOR_TEXT")).addOption("background", t("COLOR_BG")).addOption("before-text", t("COLOR_DOTS_BEFORE")).addOption("after-text", t("COLOR_DOTS_AFTER")).setValue(this.plugin.settings.colorStrategy).onChange(async (value) => {

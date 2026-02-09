@@ -192,7 +192,11 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		this.ruleElements = [];
 
 		containerEl.createEl('h2', { text: t('SETTINGS_TITLE') });
-		containerEl.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
+		
+		// Plugin description wrapped in its own div
+		const descContainer = containerEl.createDiv({ cls: 'plugin-description-container' });
+		descContainer.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
+		
 		containerEl.createEl('h3', { text: t('GENERAL_SECTION') });
 
 		new Setting(containerEl)
@@ -283,7 +287,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		this.plugin.settings.tagColors.forEach((config, index) => {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
 			
-			// If this item is currently being dragged, maintain the class across re-renders
 			if (this.draggingIndex === index) {
 				div.addClass('is-dragging');
 			}

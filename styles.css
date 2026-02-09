@@ -22,7 +22,8 @@
     transform: translateY(-50%);
 }
 
-/* Sizing Overrides */
+/* DOTS SIZE OPTIONS */
+
 .tag-dots-container.dots-small .tag-dot { width: 6px; height: 6px; }
 .tag-dots-container.dots-default .tag-dot { width: 7px; height: 7px; }
 .tag-dots-container.dots-big .tag-dot { width: 8px; height: 8px; }
@@ -33,13 +34,28 @@
     align-items: center;
 }
 
+
 /* --- SETTINGS TAB STYLES --- */
+
+.plugin-description-container {
+    /* Add your custom styling here */
+    margin-bottom: 24px;
+    margin-left: 16px;
+    margin-right: 16px;
+    margin-top: -4px;
+}
+
+
+/* RULES LIST */
 
 .tag-rules-list {
     display: flex;
     flex-direction: column;
     margin-top: 16px;
 }
+
+
+/* RULE ITEM */
 
 .tag-color-setting-item {
     display: flex !important;
@@ -96,6 +112,9 @@
     border: 1px solid var(--text-error) !important;
 }
 
+
+/* ERROR MESSAGES */
+
 .tag-error-message {
     color: var(--text-error);
     font-size: 0.75em;
@@ -113,6 +132,9 @@
     margin-bottom: -21.5px;
 }
 
+
+/* DRAG AND DROP */
+
 .drag-handle {
     color: var(--text-muted);
     cursor: grab;
@@ -125,6 +147,5 @@
     opacity: 1;
     background-color: var(--background-modifier-hover);
     border-radius: var(--input-radius);
-/*  box-shadow: 0 0 8px var(--interactive-accent); */
     border-bottom: 2px solid var(--interactive-accent) !important;
 }
