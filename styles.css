@@ -1,13 +1,32 @@
 /* --- FILE EXPLORER STYLES --- */
 
+.nav-file-title.colored-tag-file {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Strategy: Text Color */
+.nav-file-title.strategy-text {
+    color: var(--tag-file-color) !important;
+}
+
+/* Strategy: Background Color */
+.nav-file-title.strategy-background {
+    background-color: var(--tag-file-color) !important;
+    border-radius: var(--radius-s); /* Uses Obsidian's standard radius */
+}
+
+/* --- DOTS SYSTEM --- */
+
 .tag-dots-container {
     display: flex;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
-    width: 0px; 
-    height: 0px;
+    width: 0;
+    height: 0;
     z-index: 10;
 }
 
@@ -20,42 +39,45 @@
     border: 0.5px solid var(--background-primary);
     top: 50%;
     transform: translateY(-50%);
+    background-color: var(--dot-color);
+    z-index: calc(20 - var(--dot-index));
 }
 
-/* DOTS SIZE OPTIONS */
+/* Handle dynamic positioning via CSS calculation based on index */
+.tag-dots-container.is-before .tag-dot {
+    right: calc(-16px + (var(--dot-index) * var(--dot-spacing, 4.5px)));
+}
 
+.tag-dots-container.is-after .tag-dot {
+    right: calc(10px + (var(--dot-index) * var(--dot-spacing, 4.5px)));
+}
+
+/* DOTS SIZE & SPACING OPTIONS */
+
+.tag-dots-container.dots-small { --dot-spacing: 4px; }
 .tag-dots-container.dots-small .tag-dot { width: 6px; height: 6px; }
-.tag-dots-container.dots-default .tag-dot { width: 7px; height: 7px; }
-.tag-dots-container.dots-big .tag-dot { width: 8px; height: 8px; }
 
-.nav-file-title.colored-tag-file {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
+.tag-dots-container.dots-default { --dot-spacing: 4.5px; }
+.tag-dots-container.dots-default .tag-dot { width: 7px; height: 7px; }
+
+.tag-dots-container.dots-big { --dot-spacing: 5px; }
+.tag-dots-container.dots-big .tag-dot { width: 8px; height: 8px; }
 
 
 /* --- SETTINGS TAB STYLES --- */
 
 .plugin-description-container {
-    /* Add your custom styling here */
     margin-bottom: 24px;
     margin-left: 16px;
     margin-right: 16px;
     margin-top: -4px;
 }
 
-
-/* RULES LIST */
-
 .tag-rules-list {
     display: flex;
     flex-direction: column;
     margin-top: 16px;
 }
-
-
-/* RULE ITEM */
 
 .tag-color-setting-item {
     display: flex !important;
@@ -112,9 +134,6 @@
     border: 1px solid var(--text-error) !important;
 }
 
-
-/* ERROR MESSAGES */
-
 .tag-error-message {
     color: var(--text-error);
     font-size: 0.75em;
@@ -127,20 +146,12 @@
 
 .tag-error-message.is-visible {
     display: block;
-    margin-top: 8px;
-    margin-left: 8px;
-    margin-bottom: -21.5px;
 }
-
-
-/* DRAG AND DROP */
 
 .drag-handle {
     color: var(--text-muted);
     cursor: grab;
     flex: 0 0 auto;
-    margin-top: 6px;
-    margin-bottom: 6px;
 }
 
 .tag-color-setting-item.is-dragging {

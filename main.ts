@@ -19,7 +19,6 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		// Casting MetadataCache to include the non-public getTags() method
 		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
 		const allTags = Object.keys(cache.getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
@@ -112,10 +111,8 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	private cleanElement(el: HTMLElement) {
-		el.style.removeProperty('color');
-		el.style.removeProperty('background-color');
-		el.style.removeProperty('border-radius');
-		el.classList.remove('colored-tag-file');
+		el.classList.remove('colored-tag-file', 'strategy-text', 'strategy-background', 'strategy-before-text', 'strategy-after-text');
+		el.style.removeProperty('--tag-file-color');
 		const existingDots = el.querySelector('.tag-dots-container');
 		if (existingDots) existingDots.remove();
 	}
@@ -146,25 +143,22 @@ export default class TagsColorFilesPlugin extends Plugin {
 						}
 						if (matchedColors.length > 0) {
 							el.classList.add('colored-tag-file');
-							if (this.settings.colorStrategy === 'text') {
-								el.style.color = matchedColors[0];
-							} else if (this.settings.colorStrategy === 'background') {
-								el.style.backgroundColor = matchedColors[0];
-								el.style.borderRadius = '4px';
-							} else if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
+							el.classList.add(`strategy-${this.settings.colorStrategy}`);
+							
+							// Pass the primary color to CSS via a variable
+							el.style.setProperty('--tag-file-color', matchedColors[0]);
+
+							if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
 								const dotsContainer = document.createElement('div');
 								const isBefore = this.settings.colorStrategy === 'before-text';
 								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
-								let spacing = 4.5; 
-								if (this.settings.dotSize === 'small') spacing = 4;
-								else if (this.settings.dotSize === 'big') spacing = 5;
+								
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = document.createElement('div');
 									dot.className = 'tag-dot';
-									dot.style.backgroundColor = color;
-									if (isBefore) dot.style.right = `${-16 + (i * spacing)}px`; 
-									else dot.style.right = `${10 + (i * spacing)}px`; 
-									dot.style.zIndex = `${20 - i}`;
+									// Pass individual dot colors via variables to avoid inline style calculations
+									dot.style.setProperty('--dot-color', color);
+									dot.style.setProperty('--dot-index', i.toString());
 									dotsContainer.appendChild(dot);
 								});
 								el.appendChild(dotsContainer);
