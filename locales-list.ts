@@ -2,7 +2,10 @@ import { moment } from 'obsidian';
 import en from './locales/en';
 import ru from './locales/ru'; // Import other languages here
 
-const localeMap: { [key: string]: any } = {
+// Define a type for the locale data to avoid using 'any'
+type LocaleData = Record<string, string>;
+
+const localeMap: Record<string, LocaleData> = {
     en,
     ru,
     // Add other mappings here
