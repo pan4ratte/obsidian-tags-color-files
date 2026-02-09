@@ -245,20 +245,20 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
 				const input = document.createElement('input');
 				input.type = 'file'; input.accept = '.json';
-				// Fix: Removed 'async' as there is no 'await' in this top-level arrow
 				input.onchange = (e: Event) => {
 					const target = e.target as HTMLInputElement;
 					const file = target.files?.[0];
 					if (!file) return;
 					const reader = new FileReader();
-					reader.onload = async (event: ProgressEvent<FileReader>) => {
+					// Fix: DOM FileReader.onload expects void return
+					reader.onload = (event: ProgressEvent<FileReader>) => {
 						try {
 							const result = event.target?.result;
 							if (typeof result === 'string') {
 								const parsed = JSON.parse(result);
 								if (Array.isArray(parsed)) {
 									this.plugin.settings.tagColors = parsed;
-									await this.plugin.saveSettings(); 
+									this.plugin.saveSettings(); 
 									this.display();
 									new Notice(t('IMPORTED'));
 								}
@@ -282,7 +282,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.addButton((btn) => btn
 				.setButtonText(t('ADD_RULE_BTN'))
 				.setCta()
-				// Fix: Removed 'async' as there is no 'await' in this arrow
 				.onClick(() => {
 					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
 					this.display();
@@ -312,13 +311,14 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				this.display(); 
 			});
 
-			div.addEventListener('dragover', async (e) => {
+			// Fix: dragover expects void
+			div.addEventListener('dragover', (e) => {
 				e.preventDefault();
 				if (this.draggingIndex !== null && this.draggingIndex !== index) {
 					const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
 					this.plugin.settings.tagColors.splice(index, 0, movedItem);
 					this.draggingIndex = index; 
-					await this.plugin.saveSettings();
+					this.plugin.saveSettings();
 					this.display();
 				}
 			});
@@ -332,9 +332,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cp.type = 'color'; 
 			cp.value = config.color;
 			cp.addClass('tag-color-picker-input');
-			cp.onchange = async (e: Event) => { 
+			// Fix: onchange expects void
+			cp.onchange = (e: Event) => { 
 				config.color = (e.target as HTMLInputElement).value; 
-				await this.plugin.saveSettings(); 
+				this.plugin.saveSettings(); 
 			};
 			div.appendChild(cp);
 
@@ -377,25 +378,28 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			};
 
 			txt.oninput = validateAllTags;
-			txt.onchange = async (e: Event) => { 
+			// Fix: onchange expects void
+			txt.onchange = (e: Event) => { 
 				config.tag = (e.target as HTMLInputElement).value; 
 				validateAllTags();
-				await this.plugin.saveSettings(); 
+				this.plugin.saveSettings(); 
 			};
 			
-			txt.addEventListener('blur', async () => {
+			// Fix: Event listener expects void
+			txt.addEventListener('blur', () => {
 				if (!txt.value || txt.value.trim() === '') {
 					this.plugin.settings.tagColors.splice(index, 1);
-					await this.plugin.saveSettings();
+					this.plugin.saveSettings();
 					this.display();
 				}
 			});
 
 			const del = div.createEl('button', { cls: 'clickable-icon' });
 			setIcon(del, 'trash');
-			del.onclick = async () => {
+			// Fix: onclick expects void
+			del.onclick = () => {
 				this.plugin.settings.tagColors.splice(index, 1);
-				await this.plugin.saveSettings(); 
+				this.plugin.saveSettings(); 
 				this.display();
 			};
 		});
