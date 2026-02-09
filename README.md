@@ -33,8 +33,6 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.
 
-- [ ] New coloring method: "Border".
-
 - [x] ~~Prevention of creation of two rules for the same tag.~~
 
 - [x] ~~Suggestions of existing tags while creating a new rule.~~
