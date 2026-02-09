@@ -19,7 +19,7 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		// Casting to access internal getTags method
+		// Casting to access internal getTags method without 'any'
 		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
 		const allTags = Object.keys(cache.getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
@@ -250,7 +250,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					const file = target.files?.[0];
 					if (!file) return;
 					const reader = new FileReader();
-					// Fix: DOM FileReader.onload expects void return
 					reader.onload = (event: ProgressEvent<FileReader>) => {
 						try {
 							const result = event.target?.result;
@@ -258,7 +257,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 								const parsed = JSON.parse(result);
 								if (Array.isArray(parsed)) {
 									this.plugin.settings.tagColors = parsed;
-									this.plugin.saveSettings(); 
+									void this.plugin.saveSettings(); 
 									this.display();
 									new Notice(t('IMPORTED'));
 								}
@@ -300,30 +299,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 			div.draggable = true;
 
-			div.addEventListener('dragstart', () => { 
-				this.draggingIndex = index; 
-				div.addClass('is-dragging'); 
-			});
-
-			div.addEventListener('dragend', () => { 
-				this.draggingIndex = null; 
-				div.removeClass('is-dragging'); 
-				this.display(); 
-			});
-
-			// Fix: dragover expects void
-			div.addEventListener('dragover', (e) => {
-				e.preventDefault();
-				if (this.draggingIndex !== null && this.draggingIndex !== index) {
-					const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-					this.plugin.settings.tagColors.splice(index, 0, movedItem);
-					this.draggingIndex = index; 
-					this.plugin.saveSettings();
-					this.display();
-				}
-			});
-
-			div.addEventListener('drop', (e) => { e.preventDefault(); });
+			// Logic to populate txt and validateAllTags is below; 
+			// these variables are available inside this scope.
 
 			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
 			setIcon(dragHandle, 'lucide-grip-vertical');
@@ -332,10 +309,9 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cp.type = 'color'; 
 			cp.value = config.color;
 			cp.addClass('tag-color-picker-input');
-			// Fix: onchange expects void
 			cp.onchange = (e: Event) => { 
 				config.color = (e.target as HTMLInputElement).value; 
-				this.plugin.saveSettings(); 
+				void this.plugin.saveSettings(); 
 			};
 			div.appendChild(cp);
 
@@ -377,29 +353,71 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				});
 			};
 
+			// DRAG EVENTS
+			div.addEventListener('dragstart', () => { 
+				// Save input before dragging if valid
+				validateAllTags();
+				if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
+					config.tag = txt.value;
+					void this.plugin.saveSettings();
+				}
+
+				this.draggingIndex = index; 
+				div.addClass('is-dragging'); 
+			});
+
+			div.addEventListener('dragend', () => { 
+				this.draggingIndex = null; 
+				div.removeClass('is-dragging'); 
+				this.display(); 
+			});
+
+			div.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				if (this.draggingIndex !== null && this.draggingIndex !== index) {
+					const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+					this.plugin.settings.tagColors.splice(index, 0, movedItem);
+					this.draggingIndex = index; 
+					void this.plugin.saveSettings();
+					this.display();
+				}
+			});
+
+			div.addEventListener('drop', (e) => { e.preventDefault(); });
+
+			// INPUT EVENTS
 			txt.oninput = validateAllTags;
-			// Fix: onchange expects void
+
+			txt.addEventListener('keydown', (e: KeyboardEvent) => {
+				if (e.key === 'Enter') {
+					validateAllTags();
+					if (!txt.classList.contains('is-invalid')) {
+						config.tag = txt.value;
+						void this.plugin.saveSettings();
+						txt.blur();
+					}
+				}
+			});
+
 			txt.onchange = (e: Event) => { 
 				config.tag = (e.target as HTMLInputElement).value; 
 				validateAllTags();
-				this.plugin.saveSettings(); 
+				void this.plugin.saveSettings(); 
 			};
 			
-			// Fix: Event listener expects void
 			txt.addEventListener('blur', () => {
 				if (!txt.value || txt.value.trim() === '') {
 					this.plugin.settings.tagColors.splice(index, 1);
-					this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 					this.display();
 				}
 			});
 
 			const del = div.createEl('button', { cls: 'clickable-icon' });
 			setIcon(del, 'trash');
-			// Fix: onclick expects void
 			del.onclick = () => {
 				this.plugin.settings.tagColors.splice(index, 1);
-				this.plugin.saveSettings(); 
+				void this.plugin.saveSettings(); 
 				this.display();
 			};
 		});

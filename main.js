@@ -38,14 +38,14 @@ var en_default = {
   PLUGIN_DESCRIPTION: "Tags Color Files highlights files in your Obsidian file explorer based on predefined coloring rules. When you add a tag that has a corresponding coloring rule to a file, the plugin automatically highlights that file in the file explorer with predefined color.",
   GENERAL_SECTION: "General",
   COLOR_METHOD_NAME: "Coloring method",
-  COLOR_METHOD_DESC: 'If "Dots Before Text" or "Dots After Text" is selected, multiple colored dots will be displayed simultaneously if the file has more that one tag with predefined coloring rule.',
+  COLOR_METHOD_DESC: 'If "Dots before text" or "Dots after text" is selected, multiple colored dots will be displayed simultaneously if the file has more that one tag with predefined coloring rule.',
   COLOR_TEXT: "Text",
   COLOR_BG: "Background",
   COLOR_DOTS_BEFORE: "Dots before text",
   COLOR_DOTS_AFTER: "Dots after text",
   BACKUP_RESTORE: "Backup & restore",
   DOT_SIZE_NAME: "Dots size",
-  DOT_SIZE_DESC: 'Choose the size of dots for "Dots Before/After Text" coloring methods.',
+  DOT_SIZE_DESC: 'Choose the size of dots for "Dots before/after Text" coloring methods.',
   DOT_SMALL: "Small",
   DOT_DEFAULT: "Default",
   DOT_BIG: "Big",
@@ -303,7 +303,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
               const parsed = JSON.parse(result);
               if (Array.isArray(parsed)) {
                 this.plugin.settings.tagColors = parsed;
-                this.plugin.saveSettings();
+                void this.plugin.saveSettings();
                 this.display();
                 new import_obsidian2.Notice(t("IMPORTED"));
               }
@@ -333,28 +333,6 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         div.addClass("is-dragging");
       }
       div.draggable = true;
-      div.addEventListener("dragstart", () => {
-        this.draggingIndex = index;
-        div.addClass("is-dragging");
-      });
-      div.addEventListener("dragend", () => {
-        this.draggingIndex = null;
-        div.removeClass("is-dragging");
-        this.display();
-      });
-      div.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        if (this.draggingIndex !== null && this.draggingIndex !== index) {
-          const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-          this.plugin.settings.tagColors.splice(index, 0, movedItem);
-          this.draggingIndex = index;
-          this.plugin.saveSettings();
-          this.display();
-        }
-      });
-      div.addEventListener("drop", (e) => {
-        e.preventDefault();
-      });
       const dragHandle = div.createEl("div", { cls: "clickable-icon drag-handle" });
       (0, import_obsidian2.setIcon)(dragHandle, "lucide-grip-vertical");
       const cp = document.createElement("input");
@@ -363,7 +341,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       cp.addClass("tag-color-picker-input");
       cp.onchange = (e) => {
         config.color = e.target.value;
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       };
       div.appendChild(cp);
       const inputContainer = div.createDiv({ cls: "tag-input-container" });
@@ -399,16 +377,53 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
           }
         });
       };
+      div.addEventListener("dragstart", () => {
+        validateAllTags();
+        if (!txt.classList.contains("is-invalid") && txt.value.trim() !== "") {
+          config.tag = txt.value;
+          void this.plugin.saveSettings();
+        }
+        this.draggingIndex = index;
+        div.addClass("is-dragging");
+      });
+      div.addEventListener("dragend", () => {
+        this.draggingIndex = null;
+        div.removeClass("is-dragging");
+        this.display();
+      });
+      div.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (this.draggingIndex !== null && this.draggingIndex !== index) {
+          const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+          this.plugin.settings.tagColors.splice(index, 0, movedItem);
+          this.draggingIndex = index;
+          void this.plugin.saveSettings();
+          this.display();
+        }
+      });
+      div.addEventListener("drop", (e) => {
+        e.preventDefault();
+      });
       txt.oninput = validateAllTags;
+      txt.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          validateAllTags();
+          if (!txt.classList.contains("is-invalid")) {
+            config.tag = txt.value;
+            void this.plugin.saveSettings();
+            txt.blur();
+          }
+        }
+      });
       txt.onchange = (e) => {
         config.tag = e.target.value;
         validateAllTags();
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
       };
       txt.addEventListener("blur", () => {
         if (!txt.value || txt.value.trim() === "") {
           this.plugin.settings.tagColors.splice(index, 1);
-          this.plugin.saveSettings();
+          void this.plugin.saveSettings();
           this.display();
         }
       });
@@ -416,7 +431,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       (0, import_obsidian2.setIcon)(del, "trash");
       del.onclick = () => {
         this.plugin.settings.tagColors.splice(index, 1);
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         this.display();
       };
     });
