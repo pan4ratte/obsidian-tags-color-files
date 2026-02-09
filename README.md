@@ -31,7 +31,9 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
-- [ ] Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.
+- [ ] Plugin optimization for Obsidian mobile.
+
+- [x] ~~Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.~~
 
 - [x] ~~Prevention of creation of two rules for the same tag.~~
 

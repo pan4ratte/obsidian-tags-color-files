@@ -19,7 +19,6 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		// Casting to access internal getTags method without 'any'
 		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
 		const allTags = Object.keys(cache.getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
@@ -181,6 +180,15 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		this.plugin = plugin; 
 	}
 
+	private validateTagName(tag: string): boolean {
+		if (!tag) return true;
+		const cleanTag = tag.replace(/^#/, '');
+		if (!cleanTag) return true;
+		// Obsidian tag rules: no symbols, cannot be purely numeric
+		const validTagRegex = /^(?!\d+$)[\p{L}\p{N}\/_-]+$/u;
+		return validTagRegex.test(cleanTag);
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -290,17 +298,35 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		const rulesContainer = containerEl.createDiv({ cls: 'tag-rules-list' });
 
+		const validateAllTags = () => {
+			const tagCounts: { [key: string]: number } = {};
+			this.ruleElements.forEach(el => {
+				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+				if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
+			});
+
+			this.ruleElements.forEach(el => {
+				const rawVal = el.txt.value.trim();
+				const normalizedVal = rawVal.replace(/^#/, '').toLowerCase();
+				
+				const isDuplicate = normalizedVal && tagCounts[normalizedVal] > 1;
+				const isValid = this.validateTagName(rawVal);
+
+				if (isDuplicate || !isValid) {
+					el.txt.addClass('is-invalid');
+					el.error.addClass('is-visible');
+					el.error.setText(!isValid ? t('INVALID_TAG_ERROR') : t('DUPLICATE_TAG_ERROR'));
+				} else {
+					el.txt.removeClass('is-invalid');
+					el.error.removeClass('is-visible');
+				}
+			});
+		};
+
 		this.plugin.settings.tagColors.forEach((config, index) => {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
-			
-			if (this.draggingIndex === index) {
-				div.addClass('is-dragging');
-			}
-
+			if (this.draggingIndex === index) div.addClass('is-dragging');
 			div.draggable = true;
-
-			// Logic to populate txt and validateAllTags is below; 
-			// these variables are available inside this scope.
 
 			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
 			setIcon(dragHandle, 'lucide-grip-vertical');
@@ -325,43 +351,17 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			if (index === 0) this.lastCreatedInput = txt;
 			fieldWrapper.appendChild(txt);
 
-			const errorMsg = inputContainer.createEl('div', { 
-				cls: 'tag-error-message', 
-				text: t('DUPLICATE_TAG_ERROR') 
-			});
+			const errorMsg = inputContainer.createEl('div', { cls: 'tag-error-message' });
 
 			this.ruleElements.push({ txt, error: errorMsg });
-
 			new TagSuggest(this.app, txt);
 
-			const validateAllTags = () => {
-				const tagCounts: { [key: string]: number } = {};
-				this.ruleElements.forEach(el => {
-					const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
-					if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
-				});
-
-				this.ruleElements.forEach(el => {
-					const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
-					if (val && tagCounts[val] > 1) {
-						el.txt.addClass('is-invalid');
-						el.error.addClass('is-visible');
-					} else {
-						el.txt.removeClass('is-invalid');
-						el.error.removeClass('is-visible');
-					}
-				});
-			};
-
-			// DRAG EVENTS
 			div.addEventListener('dragstart', () => { 
-				// Save input before dragging if valid
 				validateAllTags();
 				if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
 					config.tag = txt.value;
 					void this.plugin.saveSettings();
 				}
-
 				this.draggingIndex = index; 
 				div.addClass('is-dragging'); 
 			});
@@ -383,9 +383,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				}
 			});
 
-			div.addEventListener('drop', (e) => { e.preventDefault(); });
-
-			// INPUT EVENTS
 			txt.oninput = validateAllTags;
 
 			txt.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -422,19 +419,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			};
 		});
 		
-		if (this.ruleElements.length > 0) {
-			const tagCounts: { [key: string]: number } = {};
-			this.ruleElements.forEach(el => {
-				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
-				if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
-			});
-			this.ruleElements.forEach(el => {
-				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
-				if (val && tagCounts[val] > 1) {
-					el.txt.addClass('is-invalid');
-					el.error.addClass('is-visible');
-				}
-			});
-		}
+		validateAllTags();
 	}
 }
