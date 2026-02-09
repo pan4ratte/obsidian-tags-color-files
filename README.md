@@ -20,14 +20,12 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 ## Plugin Use Case
 
-Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, and I can imagine that there could be much more creative use cases for it.
+Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, but I can imagine that there could be much more creative use cases for it.
 
 
 ## Contributions and Roadmap
 
 I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
-
-- [ ] Complete code audit. This plugin was almost entirely vibecoded and there should be done a lot of cleanup and optimization.
 
 - [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
