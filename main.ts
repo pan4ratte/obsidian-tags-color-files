@@ -7,7 +7,8 @@ import {
 	getAllTags,
 	Notice,
 	setIcon,
-	AbstractInputSuggest
+	AbstractInputSuggest,
+	MetadataCache
 } from 'obsidian';
 import { t } from './locales-list';
 
@@ -18,7 +19,9 @@ class TagSuggest extends AbstractInputSuggest<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		const allTags = Object.keys((this.app.metadataCache as any).getTags());
+		// Casting MetadataCache to include the non-public getTags() method
+		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
+		const allTags = Object.keys(cache.getTags());
 		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
 		return allTags.filter(tag => tag.toLowerCase().contains(normalizedQuery));
 	}
@@ -130,7 +133,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 					const file = this.app.vault.getAbstractFileByPath(path);
 					if (file instanceof TFile) {
 						const cache = this.app.metadataCache.getFileCache(file);
-						const fileTags = getAllTags(cache);
+						const fileTags = cache ? getAllTags(cache) : null;
 						this.cleanElement(el);
 						if (!fileTags || this.settings.tagColors.length === 0) return;
 						const matchedColors: string[] = [];
@@ -193,7 +196,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', { text: t('SETTINGS_TITLE') });
 		
-		// Plugin description wrapped in its own div
 		const descContainer = containerEl.createDiv({ cls: 'plugin-description-container' });
 		descContainer.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
 		
@@ -209,7 +211,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.addOption('before-text', t('COLOR_DOTS_BEFORE'))
 					.addOption('after-text', t('COLOR_DOTS_AFTER'))
 					.setValue(this.plugin.settings.colorStrategy)
-					.onChange(async (value: any) => {
+					.onChange(async (value: TagsColorFilesSettings['colorStrategy']) => {
 						this.plugin.settings.colorStrategy = value;
 						await this.plugin.saveSettings();
 						this.display();
@@ -226,7 +228,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						.addOption('default', t('DOT_DEFAULT'))
 						.addOption('big', t('DOT_BIG'))
 						.setValue(this.plugin.settings.dotSize)
-						.onChange(async (value: any) => {
+						.onChange(async (value: TagsColorFilesSettings['dotSize']) => {
 							this.plugin.settings.dotSize = value;
 							await this.plugin.saveSettings();
 						});
@@ -247,17 +249,22 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
 				const input = document.createElement('input');
 				input.type = 'file'; input.accept = '.json';
-				input.onchange = async (e: any) => {
-					const file = e.target.files[0];
+				input.onchange = async (e: Event) => {
+					const target = e.target as HTMLInputElement;
+					const file = target.files?.[0];
 					if (!file) return;
 					const reader = new FileReader();
-					reader.onload = async (event: any) => {
+					reader.onload = async (event: ProgressEvent<FileReader>) => {
 						try {
-							const parsed = JSON.parse(event.target.result);
-							if (Array.isArray(parsed)) {
-								this.plugin.settings.tagColors = parsed;
-								await this.plugin.saveSettings(); this.display();
-								new Notice(t('IMPORTED'));
+							const result = event.target?.result;
+							if (typeof result === 'string') {
+								const parsed = JSON.parse(result);
+								if (Array.isArray(parsed)) {
+									this.plugin.settings.tagColors = parsed;
+									await this.plugin.saveSettings(); 
+									this.display();
+									new Notice(t('IMPORTED'));
+								}
 							}
 						} catch (err) { new Notice(t('INVALID_FILE')); }
 					};
@@ -324,7 +331,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cp.type = 'color'; 
 			cp.value = config.color;
 			cp.addClass('tag-color-picker-input');
-			cp.onchange = async (e: any) => { config.color = e.target.value; await this.plugin.saveSettings(); };
+			cp.onchange = async (e: Event) => { 
+				config.color = (e.target as HTMLInputElement).value; 
+				await this.plugin.saveSettings(); 
+			};
 			div.appendChild(cp);
 
 			const inputContainer = div.createDiv({ cls: 'tag-input-container' });
@@ -366,8 +376,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			};
 
 			txt.oninput = validateAllTags;
-			txt.onchange = async (e: any) => { 
-				config.tag = e.target.value; 
+			txt.onchange = async (e: Event) => { 
+				config.tag = (e.target as HTMLInputElement).value; 
 				validateAllTags();
 				await this.plugin.saveSettings(); 
 			};

@@ -111,7 +111,8 @@ var TagSuggest = class extends import_obsidian2.AbstractInputSuggest {
     this.inputEl = inputEl;
   }
   getSuggestions(query) {
-    const allTags = Object.keys(this.app.metadataCache.getTags());
+    const cache = this.app.metadataCache;
+    const allTags = Object.keys(cache.getTags());
     const normalizedQuery = query.startsWith("#") ? query.toLowerCase() : "#" + query.toLowerCase();
     return allTags.filter((tag) => tag.toLowerCase().contains(normalizedQuery));
   }
@@ -206,7 +207,7 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
           const file = this.app.vault.getAbstractFileByPath(path);
           if (file instanceof import_obsidian2.TFile) {
             const cache = this.app.metadataCache.getFileCache(file);
-            const fileTags = (0, import_obsidian2.getAllTags)(cache);
+            const fileTags = cache ? (0, import_obsidian2.getAllTags)(cache) : null;
             this.cleanElement(el);
             if (!fileTags || this.settings.tagColors.length === 0)
               return;
@@ -302,18 +303,24 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       input.type = "file";
       input.accept = ".json";
       input.onchange = async (e) => {
-        const file = e.target.files[0];
+        var _a;
+        const target = e.target;
+        const file = (_a = target.files) == null ? void 0 : _a[0];
         if (!file)
           return;
         const reader = new FileReader();
         reader.onload = async (event) => {
+          var _a2;
           try {
-            const parsed = JSON.parse(event.target.result);
-            if (Array.isArray(parsed)) {
-              this.plugin.settings.tagColors = parsed;
-              await this.plugin.saveSettings();
-              this.display();
-              new import_obsidian2.Notice(t("IMPORTED"));
+            const result = (_a2 = event.target) == null ? void 0 : _a2.result;
+            if (typeof result === "string") {
+              const parsed = JSON.parse(result);
+              if (Array.isArray(parsed)) {
+                this.plugin.settings.tagColors = parsed;
+                await this.plugin.saveSettings();
+                this.display();
+                new import_obsidian2.Notice(t("IMPORTED"));
+              }
             }
           } catch (err) {
             new import_obsidian2.Notice(t("INVALID_FILE"));
