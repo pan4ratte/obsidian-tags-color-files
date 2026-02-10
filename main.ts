@@ -99,7 +99,6 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	async saveSettings() {
-		// Filter out empty rules to keep the array clean
 		this.settings.tagColors = this.settings.tagColors.filter(rule => rule.tag && rule.tag.trim() !== "");
 		await this.saveData(this.settings);
 		this.updateFileColors();
@@ -243,40 +242,40 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t('BACKUP_RESTORE'))
-			.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(async () => {
-				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
-				const fileName = "tags-color-settings.json";
-
-				// Mobile Export Logic (Share Sheet)
-				if (Platform.isMobile && navigator.share) {
-					const file = new File([data], fileName, { type: "application/json" });
-					if (navigator.canShare && navigator.canShare({ files: [file] })) {
-						try {
-							await navigator.share({
-								files: [file],
-								title: 'Tags Color Settings',
-							});
-							new Notice(t('EXPORTED'));
-							return;
-						} catch (e) {
-							if (e.name !== 'AbortError') console.error(e);
-						}
+			.addButton((btn) => btn.setButtonText(Platform.isMobile ? "Open Plugin Folder" : t('EXPORT')).onClick(async () => {
+				
+				// --- REVISED MOBILE LOGIC: ONLY OPEN DIRECTORY ---
+				if (Platform.isMobile) {
+					try {
+						// The main data file for the plugin is data.json in its own manifest dir
+						const pluginDir = this.plugin.manifest.dir;
+						const settingsFile = `${pluginDir}/data.json`;
+						
+						// Cast to any as showInFolder is an internal Obsidian API often used in desktop 
+						// but available via the internal file manager on mobile.
+						(this.app as any).showInFolder(settingsFile);
+						
+						new Notice("Opening plugin folder...");
+					} catch (e) {
+						new Notice("Unable to open folder.");
+						console.error(e);
 					}
+					return;
 				}
+				// -------------------------------------------------
 
-				// Standard Desktop Fallback
+				// Desktop Export
+				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
 				const blob = new Blob([data], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement('a');
-				a.href = url; 
-				a.download = fileName; 
-				a.click();
+				a.href = url; a.download = `data.json`; a.click();
 				URL.revokeObjectURL(url);
 				new Notice(t('EXPORTED'));
 			}))
 			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
 				const input = document.createElement('input');
-				input.type = 'file'; input.accept = '.json';
+				input.type = 'file'; input.accept = 'data.json';
 				input.onchange = (e: Event) => {
 					const target = e.target as HTMLInputElement;
 					const file = target.files?.[0];
@@ -332,7 +331,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.ruleElements.forEach(el => {
 				const rawVal = el.txt.value.trim();
 				const normalizedVal = rawVal.replace(/^#/, '').toLowerCase();
-				
 				const isDuplicate = normalizedVal && tagCounts[normalizedVal] > 1;
 				const isValid = this.validateTagName(rawVal);
 
@@ -376,7 +374,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			} else {
 				if (this.draggingIndex === index) div.addClass('is-dragging');
 				div.draggable = true;
-
 				const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
 				setIcon(dragHandle, 'lucide-grip-vertical');
 
@@ -433,7 +430,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
 
-			// Logic to save while typing (Debounced)
 			const debouncedSave = debounce(async () => {
 				if (txt.value.trim() !== "") {
 					config.tag = txt.value;
