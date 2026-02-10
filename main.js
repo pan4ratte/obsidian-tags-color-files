@@ -285,8 +285,24 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         });
       });
     }
-    new import_obsidian2.Setting(containerEl).setName(t("BACKUP_RESTORE")).addButton((btn) => btn.setButtonText(t("EXPORT")).onClick(() => {
+    new import_obsidian2.Setting(containerEl).setName(t("BACKUP_RESTORE")).addButton((btn) => btn.setButtonText(t("EXPORT")).onClick(async () => {
       const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+      if (import_obsidian2.Platform.isMobile && navigator.share) {
+        const file = new File([data], "tags-color-settings.json", { type: "application/json" });
+        try {
+          await navigator.share({
+            files: [file],
+            title: "Tags Color Settings",
+            text: "Exported settings from Tags Color Files plugin"
+          });
+          new import_obsidian2.Notice(t("EXPORTED"));
+        } catch (e) {
+          if (e.name !== "AbortError") {
+            new import_obsidian2.Notice("Export failed: " + e.message);
+          }
+        }
+        return;
+      }
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -436,7 +452,16 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       const errorMsg = inputContainer.createEl("div", { cls: "tag-error-message" });
       this.ruleElements.push({ txt, error: errorMsg });
       new TagSuggest(this.app, txt);
-      txt.oninput = validateAllTags;
+      const debouncedSave = (0, import_obsidian2.debounce)(async () => {
+        if (txt.value.trim() !== "") {
+          config.tag = txt.value;
+          await this.plugin.saveSettings();
+        }
+      }, 750, true);
+      txt.oninput = () => {
+        validateAllTags();
+        debouncedSave();
+      };
       txt.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           validateAllTags();

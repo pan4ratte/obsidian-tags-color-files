@@ -9,7 +9,8 @@ import {
 	setIcon,
 	AbstractInputSuggest,
 	MetadataCache,
-	Platform
+	Platform,
+	debounce
 } from 'obsidian';
 import { t } from './locales-list';
 
@@ -98,6 +99,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		// Filter out empty rules to keep the array clean
 		this.settings.tagColors = this.settings.tagColors.filter(rule => rule.tag && rule.tag.trim() !== "");
 		await this.saveData(this.settings);
 		this.updateFileColors();
@@ -241,8 +243,30 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t('BACKUP_RESTORE'))
-			.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(() => {
+			.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(async () => {
 				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+				
+				// --- NEW FEATURE: Mobile Share Sheet ---
+				if (Platform.isMobile && navigator.share) {
+					const file = new File([data], "tags-color-settings.json", { type: "application/json" });
+					try {
+						await navigator.share({
+							files: [file],
+							title: 'Tags Color Settings',
+							text: 'Exported settings from Tags Color Files plugin'
+						});
+						new Notice(t('EXPORTED'));
+					} catch (e: any) {
+						// Ignore AbortError (user cancelled)
+						if (e.name !== 'AbortError') {
+							new Notice('Export failed: ' + e.message);
+						}
+					}
+					return;
+				}
+				// ----------------------------------------
+
+				// Standard Desktop Export
 				const blob = new Blob([data], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement('a');
@@ -410,7 +434,18 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
 
-			txt.oninput = validateAllTags;
+			// Debounced Save
+			const debouncedSave = debounce(async () => {
+				if (txt.value.trim() !== "") {
+					config.tag = txt.value;
+					await this.plugin.saveSettings();
+				}
+			}, 750, true);
+
+			txt.oninput = () => {
+				validateAllTags();
+				debouncedSave();
+			};
 
 			txt.addEventListener('keydown', (e: KeyboardEvent) => {
 				if (e.key === 'Enter') {
