@@ -293,7 +293,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `tags-color-settings.json`;
+        a.download = `data.json`;
         a.click();
         URL.revokeObjectURL(url);
         new import_obsidian2.Notice(t("EXPORTED"));
@@ -445,7 +445,7 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
           config.tag = txt.value;
           await this.plugin.saveSettings();
         }
-      }, 750, true);
+      }, 400, true);
       txt.oninput = () => {
         validateAllTags();
         debouncedSave();
