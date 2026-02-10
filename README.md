@@ -11,7 +11,7 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 1. Automatic file highlighting in the Obsidian file explorer based on the tag-color rules that you create.
 
-2. Tag prioritization in the plugin settings by dragging and dropping. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
+2. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
 3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots Before Text" and "Dots After Text". Choice of the dots sizes is also available. When choosing advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
@@ -31,7 +31,7 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
-- [ ] Plugin optimization for Obsidian mobile.
+- [x] ~~Plugin optimization for Obsidian mobile.~~
 
 - [x] ~~Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.~~
 

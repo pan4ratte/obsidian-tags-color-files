@@ -8,7 +8,8 @@ import {
 	Notice,
 	setIcon,
 	AbstractInputSuggest,
-	MetadataCache
+	MetadataCache,
+	Platform
 } from 'obsidian';
 import { t } from './locales-list';
 
@@ -184,7 +185,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		if (!tag) return true;
 		const cleanTag = tag.replace(/^#/, '');
 		if (!cleanTag) return true;
-		// Obsidian tag rules: no symbols, cannot be purely numeric
 		const validTagRegex = /^(?!\d+$)[\p{L}\p{N}\/_-]+$/u;
 		return validTagRegex.test(cleanTag);
 	}
@@ -325,11 +325,65 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		this.plugin.settings.tagColors.forEach((config, index) => {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
-			if (this.draggingIndex === index) div.addClass('is-dragging');
-			div.draggable = true;
+			
+			if (Platform.isMobile) {
+				const reorderContainer = div.createDiv({ cls: 'tag-reorder-arrows' });
+				
+				const upBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
+				setIcon(upBtn, 'arrow-up');
+				upBtn.onclick = () => {
+					if (index > 0) {
+						const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+						this.plugin.settings.tagColors.splice(index - 1, 0, movedItem);
+						void this.plugin.saveSettings();
+						this.display();
+					}
+				};
 
-			const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
-			setIcon(dragHandle, 'lucide-grip-vertical');
+				const downBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
+				setIcon(downBtn, 'arrow-down');
+				downBtn.onclick = () => {
+					if (index < this.plugin.settings.tagColors.length - 1) {
+						const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+						this.plugin.settings.tagColors.splice(index + 1, 0, movedItem);
+						void this.plugin.saveSettings();
+						this.display();
+					}
+				};
+			} else {
+				if (this.draggingIndex === index) div.addClass('is-dragging');
+				div.draggable = true;
+
+				const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
+				setIcon(dragHandle, 'lucide-grip-vertical');
+
+				div.addEventListener('dragstart', () => { 
+					validateAllTags();
+					if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
+						config.tag = txt.value;
+						void this.plugin.saveSettings();
+					}
+					this.draggingIndex = index; 
+					div.addClass('is-dragging'); 
+				});
+
+				div.addEventListener('dragend', () => { 
+					this.draggingIndex = null; 
+					div.removeClass('is-dragging'); 
+					this.display(); 
+				});
+
+				div.addEventListener('dragover', (e) => {
+					e.preventDefault();
+					if (this.draggingIndex !== null && this.draggingIndex !== index) {
+						const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+						this.plugin.settings.tagColors.splice(index, 0, movedItem);
+						this.draggingIndex = index; 
+						void this.plugin.saveSettings();
+						this.display();
+					}
+				});
+			}
 
 			const cp = document.createElement('input');
 			cp.type = 'color'; 
@@ -355,33 +409,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
-
-			div.addEventListener('dragstart', () => { 
-				validateAllTags();
-				if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
-					config.tag = txt.value;
-					void this.plugin.saveSettings();
-				}
-				this.draggingIndex = index; 
-				div.addClass('is-dragging'); 
-			});
-
-			div.addEventListener('dragend', () => { 
-				this.draggingIndex = null; 
-				div.removeClass('is-dragging'); 
-				this.display(); 
-			});
-
-			div.addEventListener('dragover', (e) => {
-				e.preventDefault();
-				if (this.draggingIndex !== null && this.draggingIndex !== index) {
-					const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-					this.plugin.settings.tagColors.splice(index, 0, movedItem);
-					this.draggingIndex = index; 
-					void this.plugin.saveSettings();
-					this.display();
-				}
-			});
 
 			txt.oninput = validateAllTags;
 

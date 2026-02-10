@@ -14,7 +14,7 @@
 /* Strategy: Background Color */
 .nav-file-title.strategy-background {
     background-color: var(--tag-file-color) !important;
-    border-radius: var(--radius-s); /* Uses Obsidian's standard radius */
+    border-radius: var(--radius-s);
 }
 
 /* --- DOTS SYSTEM --- */
@@ -43,7 +43,6 @@
     z-index: calc(20 - var(--dot-index));
 }
 
-/* Handle dynamic positioning via CSS calculation based on index */
 .tag-dots-container.is-before .tag-dot {
     right: calc(-16px + (var(--dot-index) * var(--dot-spacing, 4.5px)));
 }
@@ -77,6 +76,7 @@
     display: flex;
     flex-direction: column;
     margin-top: 16px;
+    gap: 8px;
 }
 
 .tag-color-setting-item {
@@ -156,7 +156,22 @@
 
 .tag-color-setting-item.is-dragging {
     opacity: 1;
-    background-color: var(--background-modifier-hover);
+    outline-color: var(--interactive-accent);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-offset: 8px;
     border-radius: var(--input-radius);
-    border-bottom: 2px solid var(--interactive-accent) !important;
+}
+
+.tag-reorder-arrows {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+}
+
+.tag-reorder-arrows .clickable-icon {
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

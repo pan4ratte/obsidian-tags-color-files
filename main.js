@@ -362,11 +362,59 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     };
     this.plugin.settings.tagColors.forEach((config, index) => {
       const div = rulesContainer.createDiv({ cls: "tag-color-setting-item" });
-      if (this.draggingIndex === index)
-        div.addClass("is-dragging");
-      div.draggable = true;
-      const dragHandle = div.createEl("div", { cls: "clickable-icon drag-handle" });
-      (0, import_obsidian2.setIcon)(dragHandle, "lucide-grip-vertical");
+      if (import_obsidian2.Platform.isMobile) {
+        const reorderContainer = div.createDiv({ cls: "tag-reorder-arrows" });
+        const upBtn = reorderContainer.createEl("button", { cls: "clickable-icon" });
+        (0, import_obsidian2.setIcon)(upBtn, "arrow-up");
+        upBtn.onclick = () => {
+          if (index > 0) {
+            const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+            this.plugin.settings.tagColors.splice(index - 1, 0, movedItem);
+            void this.plugin.saveSettings();
+            this.display();
+          }
+        };
+        const downBtn = reorderContainer.createEl("button", { cls: "clickable-icon" });
+        (0, import_obsidian2.setIcon)(downBtn, "arrow-down");
+        downBtn.onclick = () => {
+          if (index < this.plugin.settings.tagColors.length - 1) {
+            const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+            this.plugin.settings.tagColors.splice(index + 1, 0, movedItem);
+            void this.plugin.saveSettings();
+            this.display();
+          }
+        };
+      } else {
+        if (this.draggingIndex === index)
+          div.addClass("is-dragging");
+        div.draggable = true;
+        const dragHandle = div.createEl("div", { cls: "clickable-icon drag-handle" });
+        (0, import_obsidian2.setIcon)(dragHandle, "lucide-grip-vertical");
+        div.addEventListener("dragstart", () => {
+          validateAllTags();
+          if (!txt.classList.contains("is-invalid") && txt.value.trim() !== "") {
+            config.tag = txt.value;
+            void this.plugin.saveSettings();
+          }
+          this.draggingIndex = index;
+          div.addClass("is-dragging");
+        });
+        div.addEventListener("dragend", () => {
+          this.draggingIndex = null;
+          div.removeClass("is-dragging");
+          this.display();
+        });
+        div.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          if (this.draggingIndex !== null && this.draggingIndex !== index) {
+            const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+            this.plugin.settings.tagColors.splice(index, 0, movedItem);
+            this.draggingIndex = index;
+            void this.plugin.saveSettings();
+            this.display();
+          }
+        });
+      }
       const cp = document.createElement("input");
       cp.type = "color";
       cp.value = config.color;
@@ -388,30 +436,6 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
       const errorMsg = inputContainer.createEl("div", { cls: "tag-error-message" });
       this.ruleElements.push({ txt, error: errorMsg });
       new TagSuggest(this.app, txt);
-      div.addEventListener("dragstart", () => {
-        validateAllTags();
-        if (!txt.classList.contains("is-invalid") && txt.value.trim() !== "") {
-          config.tag = txt.value;
-          void this.plugin.saveSettings();
-        }
-        this.draggingIndex = index;
-        div.addClass("is-dragging");
-      });
-      div.addEventListener("dragend", () => {
-        this.draggingIndex = null;
-        div.removeClass("is-dragging");
-        this.display();
-      });
-      div.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        if (this.draggingIndex !== null && this.draggingIndex !== index) {
-          const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
-          this.plugin.settings.tagColors.splice(index, 0, movedItem);
-          this.draggingIndex = index;
-          void this.plugin.saveSettings();
-          this.display();
-        }
-      });
       txt.oninput = validateAllTags;
       txt.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
