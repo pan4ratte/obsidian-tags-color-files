@@ -45,7 +45,7 @@ var en_default = {
   COLOR_DOTS_AFTER: "Dots after text",
   BACKUP_RESTORE: "Backup & restore",
   DOT_SIZE_NAME: "Dots size",
-  DOT_SIZE_DESC: 'Choose the size of dots for "Dots before/after Text" coloring methods.',
+  DOT_SIZE_DESC: 'Choose the size of dots for "Dots before/after text" coloring methods.',
   DOT_SMALL: "Small",
   DOT_DEFAULT: "Default",
   DOT_BIG: "Big",
