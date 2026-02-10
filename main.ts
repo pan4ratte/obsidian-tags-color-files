@@ -240,31 +240,13 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				});
 		}
 
-		new Setting(containerEl)
-			.setName(t('BACKUP_RESTORE'))
-			.addButton((btn) => btn.setButtonText(Platform.isMobile ? "Open Plugin Folder" : t('EXPORT')).onClick(async () => {
-				
-				// --- REVISED MOBILE LOGIC: ONLY OPEN DIRECTORY ---
-				if (Platform.isMobile) {
-					try {
-						// The main data file for the plugin is data.json in its own manifest dir
-						const pluginDir = this.plugin.manifest.dir;
-						const settingsFile = `${pluginDir}/data.json`;
-						
-						// Cast to any as showInFolder is an internal Obsidian API often used in desktop 
-						// but available via the internal file manager on mobile.
-						(this.app as any).showInFolder(settingsFile);
-						
-						new Notice("Opening plugin folder...");
-					} catch (e) {
-						new Notice("Unable to open folder.");
-						console.error(e);
-					}
-					return;
-				}
-				// -------------------------------------------------
+		// --- MODIFIED BACKUP SECTION ---
+		const backupSetting = new Setting(containerEl)
+			.setName(t('BACKUP_RESTORE'));
 
-				// Desktop Export
+		// Only show EXPORT button if NOT on mobile
+		if (!Platform.isMobile) {
+			backupSetting.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(() => {
 				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
 				const blob = new Blob([data], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
@@ -272,33 +254,37 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				a.href = url; a.download = `data.json`; a.click();
 				URL.revokeObjectURL(url);
 				new Notice(t('EXPORTED'));
-			}))
-			.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
-				const input = document.createElement('input');
-				input.type = 'file'; input.accept = 'data.json';
-				input.onchange = (e: Event) => {
-					const target = e.target as HTMLInputElement;
-					const file = target.files?.[0];
-					if (!file) return;
-					const reader = new FileReader();
-					reader.onload = (event: ProgressEvent<FileReader>) => {
-						try {
-							const result = event.target?.result;
-							if (typeof result === 'string') {
-								const parsed = JSON.parse(result);
-								if (Array.isArray(parsed)) {
-									this.plugin.settings.tagColors = parsed;
-									void this.plugin.saveSettings(); 
-									this.display();
-									new Notice(t('IMPORTED'));
-								}
-							}
-						} catch (err) { new Notice(t('INVALID_FILE')); }
-					};
-					reader.readAsText(file);
-				};
-				input.click();
 			}));
+		}
+
+		// Import button remains for everyone
+		backupSetting.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
+			const input = document.createElement('input');
+			input.type = 'file'; input.accept = '.json';
+			input.onchange = (e: Event) => {
+				const target = e.target as HTMLInputElement;
+				const file = target.files?.[0];
+				if (!file) return;
+				const reader = new FileReader();
+				reader.onload = (event: ProgressEvent<FileReader>) => {
+					try {
+						const result = event.target?.result;
+						if (typeof result === 'string') {
+							const parsed = JSON.parse(result);
+							if (Array.isArray(parsed)) {
+								this.plugin.settings.tagColors = parsed;
+								void this.plugin.saveSettings(); 
+								this.display();
+								new Notice(t('IMPORTED'));
+							}
+						}
+					} catch (err) { new Notice(t('INVALID_FILE')); }
+				};
+				reader.readAsText(file);
+			};
+			input.click();
+		}));
+		// --------------------------------
 
 		containerEl.createEl('hr');
 		
@@ -435,7 +421,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					config.tag = txt.value;
 					await this.plugin.saveSettings();
 				}
-			}, 750, true);
+			}, 400, true);
 
 			txt.oninput = () => {
 				validateAllTags();

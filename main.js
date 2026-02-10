@@ -285,32 +285,24 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
         });
       });
     }
-    new import_obsidian2.Setting(containerEl).setName(t("BACKUP_RESTORE")).addButton((btn) => btn.setButtonText(import_obsidian2.Platform.isMobile ? "Open Plugin Folder" : t("EXPORT")).onClick(async () => {
-      if (import_obsidian2.Platform.isMobile) {
-        try {
-          const pluginDir = this.plugin.manifest.dir;
-          const settingsFile = `${pluginDir}/data.json`;
-          this.app.showInFolder(settingsFile);
-          new import_obsidian2.Notice("Opening plugin folder...");
-        } catch (e) {
-          new import_obsidian2.Notice("Unable to open folder.");
-          console.error(e);
-        }
-        return;
-      }
-      const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `data.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      new import_obsidian2.Notice(t("EXPORTED"));
-    })).addButton((btn) => btn.setButtonText(t("IMPORT")).onClick(() => {
+    const backupSetting = new import_obsidian2.Setting(containerEl).setName(t("BACKUP_RESTORE"));
+    if (!import_obsidian2.Platform.isMobile) {
+      backupSetting.addButton((btn) => btn.setButtonText(t("EXPORT")).onClick(() => {
+        const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `tags-color-settings.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        new import_obsidian2.Notice(t("EXPORTED"));
+      }));
+    }
+    backupSetting.addButton((btn) => btn.setButtonText(t("IMPORT")).onClick(() => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = "data.json";
+      input.accept = ".json";
       input.onchange = (e) => {
         var _a;
         const target = e.target;
