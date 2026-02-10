@@ -245,32 +245,32 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			.setName(t('BACKUP_RESTORE'))
 			.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(async () => {
 				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
-				
-				// --- NEW FEATURE: Mobile Share Sheet ---
+				const fileName = "tags-color-settings.json";
+
+				// Mobile Export Logic (Share Sheet)
 				if (Platform.isMobile && navigator.share) {
-					const file = new File([data], "tags-color-settings.json", { type: "application/json" });
-					try {
-						await navigator.share({
-							files: [file],
-							title: 'Tags Color Settings',
-							text: 'Exported settings from Tags Color Files plugin'
-						});
-						new Notice(t('EXPORTED'));
-					} catch (e: any) {
-						// Ignore AbortError (user cancelled)
-						if (e.name !== 'AbortError') {
-							new Notice('Export failed: ' + e.message);
+					const file = new File([data], fileName, { type: "application/json" });
+					if (navigator.canShare && navigator.canShare({ files: [file] })) {
+						try {
+							await navigator.share({
+								files: [file],
+								title: 'Tags Color Settings',
+							});
+							new Notice(t('EXPORTED'));
+							return;
+						} catch (e) {
+							if (e.name !== 'AbortError') console.error(e);
 						}
 					}
-					return;
 				}
-				// ----------------------------------------
 
-				// Standard Desktop Export
+				// Standard Desktop Fallback
 				const blob = new Blob([data], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement('a');
-				a.href = url; a.download = `tags-color-settings.json`; a.click();
+				a.href = url; 
+				a.download = fileName; 
+				a.click();
 				URL.revokeObjectURL(url);
 				new Notice(t('EXPORTED'));
 			}))
@@ -352,7 +352,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			
 			if (Platform.isMobile) {
 				const reorderContainer = div.createDiv({ cls: 'tag-reorder-arrows' });
-				
 				const upBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
 				setIcon(upBtn, 'arrow-up');
 				upBtn.onclick = () => {
@@ -434,7 +433,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
 
-			// Debounced Save
+			// Logic to save while typing (Debounced)
 			const debouncedSave = debounce(async () => {
 				if (txt.value.trim() !== "") {
 					config.tag = txt.value;

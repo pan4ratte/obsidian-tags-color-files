@@ -287,27 +287,28 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     }
     new import_obsidian2.Setting(containerEl).setName(t("BACKUP_RESTORE")).addButton((btn) => btn.setButtonText(t("EXPORT")).onClick(async () => {
       const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+      const fileName = "tags-color-settings.json";
       if (import_obsidian2.Platform.isMobile && navigator.share) {
-        const file = new File([data], "tags-color-settings.json", { type: "application/json" });
-        try {
-          await navigator.share({
-            files: [file],
-            title: "Tags Color Settings",
-            text: "Exported settings from Tags Color Files plugin"
-          });
-          new import_obsidian2.Notice(t("EXPORTED"));
-        } catch (e) {
-          if (e.name !== "AbortError") {
-            new import_obsidian2.Notice("Export failed: " + e.message);
+        const file = new File([data], fileName, { type: "application/json" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Tags Color Settings"
+            });
+            new import_obsidian2.Notice(t("EXPORTED"));
+            return;
+          } catch (e) {
+            if (e.name !== "AbortError")
+              console.error(e);
           }
         }
-        return;
       }
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tags-color-settings.json`;
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
       new import_obsidian2.Notice(t("EXPORTED"));
