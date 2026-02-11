@@ -25,6 +25,19 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, but I can imagine that there could be much more creative use cases for it.
 
 
+## How to Install the Plugin Before it Appears in the Official Obsidian Plugin Store
+
+1. Install the `BRAT` plugin from the official Obsidian plugin store.
+
+2. In the `BRAT` settings, find the “Beta plugin list” section and click on the “Add beta plugin” button.
+
+3. In the window that appears, paste the link to the `Tags Color Files` plugin repository: [https://github.com/pan4ratte/obsidian-tags-color-files](https://github.com/pan4ratte/obsidian-tags-color-files)
+
+4. Under “Select a version,” choose “Latest version” and click the “Add plugin” button.
+
+Done! The plugin will automatically install and will be ready to use.
+
+
 ## Contributions and Roadmap
 
 I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
