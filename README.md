@@ -25,7 +25,7 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, but I can imagine that there could be much more creative use cases for it.
 
 
-## How to Install the Plugin Before it Appears in the Official Obsidian Plugin Store
+## Installation Instructions Before Plugin Appears in the Official Obsidian Store
 
 1. Install the `BRAT` plugin from the official Obsidian plugin store.
 
