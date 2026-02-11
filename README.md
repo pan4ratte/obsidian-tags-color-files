@@ -31,6 +31,8 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 - [ ] Visual enhancement of all dots coloring methods. Currently I am not completely satisfied with their integration into the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
+- [ ] Export option on mobile devices. For now, it is available only on desktop and was deleted from mobile devices because I could not make it work.
+
 - [x] ~~Plugin optimization for Obsidian mobile.~~
 
 - [x] ~~Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.~~
