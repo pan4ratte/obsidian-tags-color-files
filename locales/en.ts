@@ -8,6 +8,8 @@ export default {
     COLOR_BG: 'Background',
     COLOR_DOTS_BEFORE: 'Dots before text',
     COLOR_DOTS_AFTER: 'Dots after text',
+    COLOR_DOTS_BEFORE_TEXT: 'Dots before text + text',
+    COLOR_DOTS_AFTER_TEXT: 'Dots after text + text',
     BACKUP_RESTORE: 'Backup & restore',
     DOT_SIZE_NAME: 'Dots size',
     DOT_SIZE_DESC: 'Choose the size of dots for "Dots before/after text" coloring methods.',

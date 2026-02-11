@@ -74,6 +74,8 @@ var ru_default = {
   COLOR_BG: "\u0424\u043E\u043D",
   COLOR_DOTS_BEFORE: "\u0422\u043E\u0447\u043A\u0438 \u043F\u0435\u0440\u0435\u0434 \u0442\u0435\u043A\u0441\u0442\u043E\u043C",
   COLOR_DOTS_AFTER: "\u0422\u043E\u0447\u043A\u0438 \u043F\u043E\u0441\u043B\u0435 \u0442\u0435\u043A\u0441\u0442\u0430",
+  COLOR_DOTS_BEFORE_TEXT: "\u0422\u043E\u0447\u043A\u0438 \u043F\u0435\u0440\u0435\u0434 \u0442\u0435\u043A\u0441\u0442\u043E\u043C + \u0442\u0435\u043A\u0441\u0442",
+  COLOR_DOTS_AFTER_TEXT: "\u0422\u043E\u0447\u043A\u0438 \u043F\u043E\u0441\u043B\u0435 \u0442\u0435\u043A\u0441\u0442\u0430 + \u0442\u0435\u043A\u0441\u0442",
   DOT_SIZE_NAME: "\u0420\u0430\u0437\u043C\u0435\u0440 \u0442\u043E\u0447\u0435\u043A",
   DOT_SIZE_DESC: '\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0440\u0430\u0437\u043C\u0435\u0440 \u0446\u0432\u0435\u0442\u043D\u044B\u0445 \u0442\u043E\u0447\u0435\u043A \u0434\u043B\u044F \u043C\u0435\u0442\u043E\u0434\u043E\u0432 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u043D\u0438\u044F "\u0422\u043E\u0447\u043A\u0438 \u043F\u0435\u0440\u0435\u0434/\u043F\u043E\u0441\u043B\u0435 \u0442\u0435\u043A\u0441\u0442\u0430".',
   DOT_SMALL: "\u041C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0435",
@@ -186,7 +188,15 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
     });
   }
   cleanElement(el) {
-    el.classList.remove("colored-tag-file", "strategy-text", "strategy-background", "strategy-before-text", "strategy-after-text");
+    el.classList.remove(
+      "colored-tag-file",
+      "strategy-text",
+      "strategy-background",
+      "strategy-before-text",
+      "strategy-after-text",
+      "strategy-dots-before-text",
+      "strategy-dots-after-text"
+    );
     el.style.removeProperty("--tag-file-color");
     const existingDots = el.querySelector(".tag-dots-container");
     if (existingDots)
@@ -224,9 +234,10 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
               el.classList.add("colored-tag-file");
               el.classList.add(`strategy-${this.settings.colorStrategy}`);
               el.style.setProperty("--tag-file-color", matchedColors[0]);
-              if (this.settings.colorStrategy === "before-text" || this.settings.colorStrategy === "after-text") {
+              const strategiesWithDots = ["before-text", "after-text", "dots-before-text", "dots-after-text"];
+              if (strategiesWithDots.includes(this.settings.colorStrategy)) {
                 const dotsContainer = document.createElement("div");
-                const isBefore = this.settings.colorStrategy === "before-text";
+                const isBefore = this.settings.colorStrategy.includes("before-text");
                 dotsContainer.className = `tag-dots-container ${isBefore ? "is-before" : "is-after"} dots-${this.settings.dotSize}`;
                 matchedColors.slice(0, 3).forEach((color, i) => {
                   const dot = document.createElement("div");
@@ -271,13 +282,14 @@ var TagsColorFilesSettingTab = class extends import_obsidian2.PluginSettingTab {
     descContainer.createEl("p", { text: t("PLUGIN_DESCRIPTION"), cls: "setting-item-description" });
     new import_obsidian2.Setting(containerEl).setName(t("GENERAL_SECTION")).setHeading();
     new import_obsidian2.Setting(containerEl).setName(t("COLOR_METHOD_NAME")).setDesc(t("COLOR_METHOD_DESC")).addDropdown((dropdown) => {
-      dropdown.addOption("text", t("COLOR_TEXT")).addOption("background", t("COLOR_BG")).addOption("before-text", t("COLOR_DOTS_BEFORE")).addOption("after-text", t("COLOR_DOTS_AFTER")).setValue(this.plugin.settings.colorStrategy).onChange(async (value) => {
+      dropdown.addOption("text", t("COLOR_TEXT")).addOption("background", t("COLOR_BG")).addOption("before-text", t("COLOR_DOTS_BEFORE")).addOption("after-text", t("COLOR_DOTS_AFTER")).addOption("dots-before-text", t("COLOR_DOTS_BEFORE_TEXT")).addOption("dots-after-text", t("COLOR_DOTS_AFTER_TEXT")).setValue(this.plugin.settings.colorStrategy).onChange(async (value) => {
         this.plugin.settings.colorStrategy = value;
         await this.plugin.saveSettings();
         this.display();
       });
     });
-    if (this.plugin.settings.colorStrategy === "before-text" || this.plugin.settings.colorStrategy === "after-text") {
+    const strategiesWithDots = ["before-text", "after-text", "dots-before-text", "dots-after-text"];
+    if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
       new import_obsidian2.Setting(containerEl).setName(t("DOT_SIZE_NAME")).setDesc(t("DOT_SIZE_DESC")).addDropdown((dropdown) => {
         dropdown.addOption("small", t("DOT_SMALL")).addOption("default", t("DOT_DEFAULT")).addOption("big", t("DOT_BIG")).setValue(this.plugin.settings.dotSize).onChange(async (value) => {
           this.plugin.settings.dotSize = value;

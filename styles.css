@@ -6,8 +6,10 @@
     align-items: center;
 }
 
-/* Strategy: Text Color */
-.nav-file-title.strategy-text {
+/* Strategy: Text Color (and new combinations) */
+.nav-file-title.strategy-text,
+.nav-file-title.strategy-dots-before-text,
+.nav-file-title.strategy-dots-after-text {
     color: var(--tag-file-color) !important;
 }
 

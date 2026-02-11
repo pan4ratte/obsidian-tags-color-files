@@ -13,7 +13,7 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 2. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
-3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots Before Text" and "Dots After Text". Choice of the dots sizes is also available. When choosing advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
+3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
 4. Export and import of plugin settings to a file.
 
@@ -29,7 +29,7 @@ Initially, the plugin was created for my personal needs. When reading literature
 
 I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
 
-- [ ] Visual enhancement of the “Dots Before text” and “Dots After Text” coloring methods. Currently I am not completely satisfied with the integration of these coloring methods to the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
+- [ ] Visual enhancement of all dots coloring methods. Currently I am not completely satisfied with their integration into the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
 
 - [x] ~~Plugin optimization for Obsidian mobile.~~
 

@@ -45,7 +45,8 @@ interface TagColorConfig {
 
 interface TagsColorFilesSettings {
 	tagColors: TagColorConfig[];
-	colorStrategy: 'text' | 'background' | 'before-text' | 'after-text';
+	// Added new strategies to the type definition
+	colorStrategy: 'text' | 'background' | 'before-text' | 'after-text' | 'dots-before-text' | 'dots-after-text';
 	dotSize: 'small' | 'default' | 'big';
 }
 
@@ -113,7 +114,16 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	private cleanElement(el: HTMLElement) {
-		el.classList.remove('colored-tag-file', 'strategy-text', 'strategy-background', 'strategy-before-text', 'strategy-after-text');
+		// Added new strategy classes to remove list
+		el.classList.remove(
+			'colored-tag-file', 
+			'strategy-text', 
+			'strategy-background', 
+			'strategy-before-text', 
+			'strategy-after-text',
+			'strategy-dots-before-text',
+			'strategy-dots-after-text'
+		);
 		el.style.removeProperty('--tag-file-color');
 		const existingDots = el.querySelector('.tag-dots-container');
 		if (existingDots) existingDots.remove();
@@ -148,9 +158,14 @@ export default class TagsColorFilesPlugin extends Plugin {
 							el.classList.add(`strategy-${this.settings.colorStrategy}`);
 							el.style.setProperty('--tag-file-color', matchedColors[0]);
 
-							if (this.settings.colorStrategy === 'before-text' || this.settings.colorStrategy === 'after-text') {
+							// Check if the current strategy involves dots
+							const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
+							if (strategiesWithDots.includes(this.settings.colorStrategy)) {
 								const dotsContainer = document.createElement('div');
-								const isBefore = this.settings.colorStrategy === 'before-text';
+								
+								// Determine if dots are before or after based on the strategy name
+								const isBefore = this.settings.colorStrategy.includes('before-text');
+								
 								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
 								
 								matchedColors.slice(0, 3).forEach((color, i) => {
@@ -215,6 +230,9 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.addOption('background', t('COLOR_BG'))
 					.addOption('before-text', t('COLOR_DOTS_BEFORE'))
 					.addOption('after-text', t('COLOR_DOTS_AFTER'))
+					// Added new options
+					.addOption('dots-before-text', t('COLOR_DOTS_BEFORE_TEXT'))
+					.addOption('dots-after-text', t('COLOR_DOTS_AFTER_TEXT'))
 					.setValue(this.plugin.settings.colorStrategy)
 					.onChange(async (value: TagsColorFilesSettings['colorStrategy']) => {
 						this.plugin.settings.colorStrategy = value;
@@ -223,7 +241,9 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					});
 			});
 
-		if (this.plugin.settings.colorStrategy === 'before-text' || this.plugin.settings.colorStrategy === 'after-text') {
+		// Check if current strategy is one of the dot strategies to show dot size settings
+		const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
+		if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
 			new Setting(containerEl)
 				.setName(t('DOT_SIZE_NAME'))
 				.setDesc(t('DOT_SIZE_DESC'))

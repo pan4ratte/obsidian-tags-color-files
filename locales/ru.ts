@@ -8,6 +8,8 @@ export default {
     COLOR_BG: 'Фон',
     COLOR_DOTS_BEFORE: 'Точки перед текстом',
     COLOR_DOTS_AFTER: 'Точки после текста',
+    COLOR_DOTS_BEFORE_TEXT: 'Точки перед текстом + текст',
+    COLOR_DOTS_AFTER_TEXT: 'Точки после текста + текст',
     DOT_SIZE_NAME: 'Размер точек',
     DOT_SIZE_DESC: 'Выберите размер цветных точек для методов окрашивания "Точки перед/после текста".',
     DOT_SMALL: 'Маленькие',
