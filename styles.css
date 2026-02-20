@@ -32,7 +32,8 @@
     z-index: 10;
 }
 
-.tag-dots-container.is-before { left: 0; justify-content: flex-end; }
+.tag-dots-container.is-before-root { left: 0; justify-content: flex-end; }
+.tag-dots-container.is-before { margin-inline-start: calc(-1 * var(--size-4-6) + 1px); }
 .tag-dots-container.is-after { right: 0; justify-content: flex-end; }
 
 .tag-dot {
@@ -45,7 +46,7 @@
     z-index: calc(20 - var(--dot-index));
 }
 
-.tag-dots-container.is-before .tag-dot {
+.tag-dots-container.is-before-root .tag-dot, .tag-dots-container.is-before .tag-dot {
     right: calc(-16px + (var(--dot-index) * var(--dot-spacing, 4.5px)));
 }
 

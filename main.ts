@@ -162,11 +162,21 @@ export default class TagsColorFilesPlugin extends Plugin {
 							const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
 							if (strategiesWithDots.includes(this.settings.colorStrategy)) {
 								const dotsContainer = document.createElement('div');
-								
+
+								// Is element inside a folder
+								const hasNavFileParent = !!el.closest("div.nav-folder");
 								// Determine if dots are before or after based on the strategy name
 								const isBefore = this.settings.colorStrategy.includes('before-text');
-								
-								dotsContainer.className = `tag-dots-container ${isBefore ? 'is-before' : 'is-after'} dots-${this.settings.dotSize}`;
+
+                // Determine a dot container class according to strategy
+                let positionClass;
+                if (isBefore) {
+                  positionClass = hasNavFileParent ? "is-before" : "is-before-root";
+                } else {
+                  positionClass = "is-after";
+                }
+
+								dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
 								
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = document.createElement('div');
