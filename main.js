@@ -239,8 +239,15 @@ var TagsColorFilesPlugin = class extends import_obsidian2.Plugin {
               const strategiesWithDots = ["before-text", "after-text", "dots-before-text", "dots-after-text"];
               if (strategiesWithDots.includes(this.settings.colorStrategy)) {
                 const dotsContainer = document.createElement("div");
+                const hasNavFileParent = !!el.closest("div.nav-folder");
                 const isBefore = this.settings.colorStrategy.includes("before-text");
-                dotsContainer.className = `tag-dots-container ${isBefore ? "is-before" : "is-after"} dots-${this.settings.dotSize}`;
+                let positionClass;
+                if (isBefore) {
+                  positionClass = hasNavFileParent ? "is-before" : "is-before-root";
+                } else {
+                  positionClass = "is-after";
+                }
+                dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
                 matchedColors.slice(0, 3).forEach((color, i) => {
                   const dot = document.createElement("div");
                   dot.className = "tag-dot";
