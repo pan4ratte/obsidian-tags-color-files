@@ -169,7 +169,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 								const isBefore = this.settings.colorStrategy.includes('before-text');
 
                 // Determine a dot container class according to strategy
-								let positionClass;
+                let positionClass;
                 if (isBefore) {
                   positionClass = hasNavFileParent ? "is-before" : "is-before-root";
                 } else {
