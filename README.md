@@ -1,4 +1,4 @@
-# Tags Color Files Plugin
+# Tags Color Files plugin
 
 English | [Русский](https://github.com/pan4ratte/obsidian-tags-color-files/blob/main/README_RU.md)
 
@@ -35,7 +35,7 @@ Before plugin appears in the official Obsidian store, the easiest way to install
 
 3. In the window that appears, paste the link to the `Tags Color Files` plugin repository: [https://github.com/pan4ratte/obsidian-tags-color-files](https://github.com/pan4ratte/obsidian-tags-color-files)
 
-4. Under “Select a version,” choose “Latest version” and click the “Add plugin” button.
+4. Under “Select a version” choose “Latest version” and click the “Add plugin” button.
 
 Done! The plugin will automatically install and will be ready to use.
 
@@ -65,6 +65,6 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 
 ## About the Author
 
-My name is Mark Ingram (Ingrem), I am a Religious Studies scholar. Apart from my main area of study (Protestant Political Theology in Russia), I teach the subject "Information Technologies in Scientific Research", a unique course that I developed myself from scratch. This plugin helps me in my studies and I use it in my teaching, as well as other plugins that I develop and that you can find in my GitHub profile.
+My name is Mark Ingram (Ingrem), I am a Religious Studies scholar. Apart from my main area of study (Protestant Political Theology in Russia), I teach the subject "Information Technologies in Scientific Research", a unique course that I developed myself from scratch. This plugin helps me in my studies and I use it in my teaching, as well as other plugins that I develop and that you can find on my GitHub profile.
 
 Hello to every student that came across this page!
