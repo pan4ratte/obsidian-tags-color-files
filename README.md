@@ -44,9 +44,7 @@ Done! The plugin will automatically install and will be ready to use.
 
 I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
 
-- [ ] Visual enhancement of all dots coloring methods. Currently I am not completely satisfied with their integration into the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.
-
-- [ ] Export option on mobile devices. For now, it is available only on desktop and was deleted from mobile devices because I could not make it work.
+- [x] ~~Visual enhancement of all dots coloring methods. Currently I am not completely satisfied with their integration into the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.~~
 
 - [x] ~~Plugin optimization for Obsidian mobile.~~
 
@@ -57,6 +55,8 @@ I am open to suggestions and new ideas that expand the plugin's functionality. B
 - [x] ~~Suggestions of existing tags while creating a new rule.~~
 
 - [x] ~~An option to choose between three sizes for "Dots ..." coloring methods: default, smaller, bigger.~~
+
+- [ ] Export option on mobile devices. For now, it is available only on desktop and was deleted from mobile devices because I could not make it work.
 
 ### Knows Bugs
 
