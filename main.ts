@@ -74,7 +74,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 			let shouldUpdate = false;
 			for (const m of mutations) {
 				for (const node of Array.from(m.addedNodes)) {
-					if (node instanceof HTMLElement && (node.classList.contains('nav-file') || node.querySelector('.nav-file-title'))) {
+					if (node.nodeType === Node.ELEMENT_NODE && ((node as HTMLElement).classList.contains('nav-file') || (node as HTMLElement).querySelector('.nav-file-title'))) {
 						shouldUpdate = true;
 						break;
 					}
@@ -85,8 +85,8 @@ export default class TagsColorFilesPlugin extends Plugin {
 		});
 
 		this.app.workspace.onLayoutReady(() => {
-			this.observer.observe(document.body, { childList: true, subtree: true });
-			setTimeout(() => this.updateFileColors(), 500);
+			this.observer.observe(activeDocument.body, { childList: true, subtree: true });
+			activeWindow.setTimeout(() => this.updateFileColors(), 500);
 		});
 	}
 
@@ -96,7 +96,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<TagsColorFilesSettings>);
 	}
 
 	async saveSettings() {
@@ -116,10 +116,10 @@ export default class TagsColorFilesPlugin extends Plugin {
 	private cleanElement(el: HTMLElement) {
 		// Added new strategy classes to remove list
 		el.classList.remove(
-			'colored-tag-file', 
-			'strategy-text', 
-			'strategy-background', 
-			'strategy-before-text', 
+			'colored-tag-file',
+			'strategy-text',
+			'strategy-background',
+			'strategy-before-text',
 			'strategy-after-text',
 			'strategy-dots-before-text',
 			'strategy-dots-after-text'
@@ -161,7 +161,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 							// Check if the current strategy involves dots
 							const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
 							if (strategiesWithDots.includes(this.settings.colorStrategy)) {
-								const dotsContainer = document.createElement('div');
+								const dotsContainer = createDiv();
 
 								// Is element inside a folder
 								const hasNavFileParent = !!el.closest("div.nav-folder");
@@ -177,9 +177,9 @@ export default class TagsColorFilesPlugin extends Plugin {
                 }
 
 								dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
-								
+
 								matchedColors.slice(0, 3).forEach((color, i) => {
-									const dot = document.createElement('div');
+									const dot = createDiv();
 									dot.className = 'tag-dot';
 									dot.style.setProperty('--dot-color', color);
 									dot.style.setProperty('--dot-index', i.toString());
@@ -202,16 +202,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	lastCreatedInput: HTMLInputElement | null = null;
 	ruleElements: { txt: HTMLInputElement, error: HTMLElement }[] = [];
 
-	constructor(app: App, plugin: TagsColorFilesPlugin) { 
-		super(app, plugin); 
-		this.plugin = plugin; 
+	constructor(app: App, plugin: TagsColorFilesPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
 	}
 
 	private validateTagName(tag: string): boolean {
 		if (!tag) return true;
 		const cleanTag = tag.replace(/^#/, '');
 		if (!cleanTag) return true;
-		const validTagRegex = /^(?!\d+$)[\p{L}\p{N}\/_-]+$/u;
+		const validTagRegex = /^(?!\d+$)[\p{L}\p{N}/_-]+$/u;
 		return validTagRegex.test(cleanTag);
 	}
 
@@ -223,10 +223,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName(t('SETTINGS_TITLE'))
 			.setHeading();
-		
+
 		const descContainer = containerEl.createDiv({ cls: 'plugin-description-container' });
 		descContainer.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
-		
+
 		new Setting(containerEl)
 			.setName(t('GENERAL_SECTION'))
 			.setHeading();
@@ -280,7 +280,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
 				const blob = new Blob([data], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
-				const a = document.createElement('a');
+				const a = activeDocument.createEl('a');
 				a.href = url; a.download = `data.json`; a.click();
 				URL.revokeObjectURL(url);
 				new Notice(t('EXPORTED'));
@@ -289,7 +289,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		// Import button remains for everyone
 		backupSetting.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
-			const input = document.createElement('input');
+			const input = createEl('input');
 			input.type = 'file'; input.accept = '.json';
 			input.onchange = (e: Event) => {
 				const target = e.target as HTMLInputElement;
@@ -300,15 +300,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					try {
 						const result = event.target?.result;
 						if (typeof result === 'string') {
-							const parsed = JSON.parse(result);
-							if (Array.isArray(parsed)) {
-								this.plugin.settings.tagColors = parsed;
-								void this.plugin.saveSettings(); 
+							const parsed: unknown = JSON.parse(result);
+							if (Array.isArray(parsed) && parsed.every((item): item is TagColorConfig =>
+							    typeof item === 'object' && item !== null && 'tag' in item && 'color' in item)) {
+							    this.plugin.settings.tagColors = parsed;
+								void this.plugin.saveSettings();
 								this.display();
 								new Notice(t('IMPORTED'));
 							}
 						}
-					} catch (err) { new Notice(t('INVALID_FILE')); }
+					} catch (_err) { new Notice(t('INVALID_FILE')); }
 				};
 				reader.readAsText(file);
 			};
@@ -317,7 +318,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		// --------------------------------
 
 		containerEl.createEl('hr');
-		
+
 		new Setting(containerEl)
 			.setName(t('RULES_SECTION'))
 			.setHeading();
@@ -363,7 +364,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		this.plugin.settings.tagColors.forEach((config, index) => {
 			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
-			
+
 			if (Platform.isMobile) {
 				const reorderContainer = div.createDiv({ cls: 'tag-reorder-arrows' });
 				const upBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
@@ -390,23 +391,23 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			} else {
 				if (this.draggingIndex === index) div.addClass('is-dragging');
 				div.draggable = true;
-				const dragHandle = div.createEl('div', { cls: 'clickable-icon drag-handle' });
+				const dragHandle = div.createDiv({ cls: 'clickable-icon drag-handle' });
 				setIcon(dragHandle, 'lucide-grip-vertical');
 
-				div.addEventListener('dragstart', () => { 
+				div.addEventListener('dragstart', () => {
 					validateAllTags();
 					if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
 						config.tag = txt.value;
 						void this.plugin.saveSettings();
 					}
-					this.draggingIndex = index; 
-					div.addClass('is-dragging'); 
+					this.draggingIndex = index;
+					div.addClass('is-dragging');
 				});
 
-				div.addEventListener('dragend', () => { 
-					this.draggingIndex = null; 
-					div.removeClass('is-dragging'); 
-					this.display(); 
+				div.addEventListener('dragend', () => {
+					this.draggingIndex = null;
+					div.removeClass('is-dragging');
+					this.display();
 				});
 
 				div.addEventListener('dragover', (e) => {
@@ -414,34 +415,34 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					if (this.draggingIndex !== null && this.draggingIndex !== index) {
 						const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
 						this.plugin.settings.tagColors.splice(index, 0, movedItem);
-						this.draggingIndex = index; 
+						this.draggingIndex = index;
 						void this.plugin.saveSettings();
 						this.display();
 					}
 				});
 			}
 
-			const cp = document.createElement('input');
-			cp.type = 'color'; 
+			const cp = createEl('input');
+			cp.type = 'color';
 			cp.value = config.color;
 			cp.addClass('tag-color-picker-input');
-			cp.onchange = (e: Event) => { 
-				config.color = (e.target as HTMLInputElement).value; 
-				void this.plugin.saveSettings(); 
+			cp.onchange = (e: Event) => {
+				config.color = (e.target as HTMLInputElement).value;
+				void this.plugin.saveSettings();
 			};
 			div.appendChild(cp);
 
 			const inputContainer = div.createDiv({ cls: 'tag-input-container' });
 			const fieldWrapper = inputContainer.createDiv({ cls: 'tag-input-field-wrapper' });
-			
-			const txt = document.createElement('input');
-			txt.type = 'text'; 
+
+			const txt = createEl('input');
+			txt.type = 'text';
 			txt.value = config.tag;
 			txt.placeholder = t('TAG_PLACEHOLDER');
 			if (index === 0) this.lastCreatedInput = txt;
 			fieldWrapper.appendChild(txt);
 
-			const errorMsg = inputContainer.createEl('div', { cls: 'tag-error-message' });
+			const errorMsg = inputContainer.createDiv({ cls: 'tag-error-message' });
 
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
@@ -469,12 +470,12 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				}
 			});
 
-			txt.onchange = (e: Event) => { 
-				config.tag = (e.target as HTMLInputElement).value; 
+			txt.onchange = (e: Event) => {
+				config.tag = (e.target as HTMLInputElement).value;
 				validateAllTags();
-				void this.plugin.saveSettings(); 
+				void this.plugin.saveSettings();
 			};
-			
+
 			txt.addEventListener('blur', () => {
 				if (!txt.value || txt.value.trim() === '') {
 					this.plugin.settings.tagColors.splice(index, 1);
@@ -487,11 +488,11 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			setIcon(del, 'trash');
 			del.onclick = () => {
 				this.plugin.settings.tagColors.splice(index, 1);
-				void this.plugin.saveSettings(); 
+				void this.plugin.saveSettings();
 				this.display();
 			};
 		});
-		
+
 		validateAllTags();
 	}
 }
