@@ -7,15 +7,15 @@
 }
 
 /* Strategy: Text Color (and new combinations) */
-.nav-file-title.strategy-text,
-.nav-file-title.strategy-dots-before-text,
-.nav-file-title.strategy-dots-after-text {
-    color: var(--tag-file-color) !important;
+.nav-files-container .nav-file-title.strategy-text,
+.nav-files-container .nav-file-title.strategy-dots-before-text,
+.nav-files-container .nav-file-title.strategy-dots-after-text {
+    color: var(--tag-file-color);
 }
 
 /* Strategy: Background Color */
-.nav-file-title.strategy-background {
-    background-color: var(--tag-file-color) !important;
+.nav-files-container .nav-file-title.strategy-background {
+    background-color: var(--tag-file-color);
     border-radius: var(--radius-s);
 }
 
@@ -82,14 +82,14 @@
     gap: 8px;
 }
 
-.tag-color-setting-item {
-    display: flex !important;
+.tag-rules-list .tag-color-setting-item {
+    display: flex;
     align-items: center;
-    gap: 10px !important;
+    gap: 10px;
     margin-bottom: 8px;
     margin-top: 8px;
-    padding: 4px !important;
-    border: 2px solid transparent; 
+    padding: 4px;
+    border: 2px solid transparent;
 }
 
 .tag-input-container {
@@ -102,12 +102,12 @@
     width: 100%;
 }
 
-.tag-color-picker-input {
-    appearance: none !important;
-    border: none !important;
-    padding: 0 !important;
-    background: none !important;
-    cursor: pointer !important;
+.tag-color-setting-item .tag-color-picker-input {
+    appearance: none;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
     width: 24px;
     height: 24px;
     min-width: 24px;
@@ -115,26 +115,26 @@
     max-width: 24px;
     max-height: 24px;
     flex: 0 0 24px;
-    border-radius: 50% !important;
-    overflow: hidden !important;
+    border-radius: 50%;
+    overflow: hidden;
 }
 
-.tag-color-picker-input::-webkit-color-swatch-wrapper {
-    padding: 0 !important;
-    border-radius: 50% !important;
+.tag-color-setting-item .tag-color-picker-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 50%;
 }
 
-.tag-color-picker-input::-webkit-color-swatch {
-    border: 1px solid var(--background-modifier-border) !important;
-    border-radius: 50% !important;
+.tag-color-setting-item .tag-color-picker-input::-webkit-color-swatch {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
 }
 
-.tag-color-setting-item input[type="text"] {
-    width: 100% !important;
+.tag-rules-list .tag-color-setting-item input[type="text"] {
+    width: 100%;
 }
 
-.tag-color-setting-item input[type="text"].is-invalid {
-    border: 1px solid var(--text-error) !important;
+.tag-rules-list .tag-color-setting-item input[type="text"].is-invalid {
+    border: 1px solid var(--text-error);
 }
 
 .tag-error-message {
