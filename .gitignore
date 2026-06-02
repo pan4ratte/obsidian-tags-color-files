@@ -3,3 +3,6 @@ data.json
 /res
 /.idea
 main.js
+/locales/en.js
+/locales/ru.js
+locales-list.js
