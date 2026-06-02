@@ -10,7 +10,8 @@ import {
 	AbstractInputSuggest,
 	MetadataCache,
 	Platform,
-	debounce
+	debounce,
+	setTooltip
 } from 'obsidian';
 import { t } from './locales-list';
 
@@ -424,14 +425,20 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				});
 			}
 
+			// Negative and positive tag highlights button
+
 			const notBtn = div.createEl('button', { cls: 'clickable-icon tag-not-btn' });
 			setIcon(notBtn, config.isNegative ? 'ban' : 'check');
-			notBtn.title = config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE');
+
+			setTooltip(notBtn, config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE'));
+
 			notBtn.onclick = () => {
-				config.isNegative = !config.isNegative;
-				setIcon(notBtn, config.isNegative ? 'ban' : 'check');
-				notBtn.title = config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE');
-				void this.plugin.saveSettings();
+			    config.isNegative = !config.isNegative;
+			    setIcon(notBtn, config.isNegative ? 'ban' : 'check');
+
+			    setTooltip(notBtn, config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE'));
+
+			    void this.plugin.saveSettings();
 			};
 
 			const cp = createEl('input');
