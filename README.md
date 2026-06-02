@@ -13,11 +13,13 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 2. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
-3. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
+3. Negative highlighting. By default, every new rule highlights files with a specified tag: toggle the switch next to the input field to invert this behavior and highlight files without the tag instead.
 
-4. Export and import of plugin settings to a file.
+4. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
-5. Localization support. Currently available languages: English and Russian.
+5. Export and import of plugin settings to a file.
+
+6. Localization support. Currently available languages: English and Russian.
 
 
 ## Plugin Use Case
