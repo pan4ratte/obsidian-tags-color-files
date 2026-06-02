@@ -27,5 +27,7 @@ export default {
     ADD_RULE_BTN: 'New rule',
     TAG_PLACEHOLDER: 'Enter a tag (case-insensitive)',
     DUPLICATE_TAG_ERROR: 'There is already a rule for this tag! Choose another tag.',
-    INVALID_TAG_ERROR: 'Invalid tag name'
+    INVALID_TAG_ERROR: 'Invalid tag name',
+    RULE_MATCH_POSITIVE: 'Has tag',
+    RULE_MATCH_NEGATIVE: 'Does NOT have tag'
 };

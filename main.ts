@@ -41,6 +41,7 @@ class TagSuggest extends AbstractInputSuggest<string> {
 interface TagColorConfig {
 	tag: string;
 	color: string;
+	isNegative?: boolean;
 }
 
 interface TagsColorFilesSettings {
@@ -142,14 +143,15 @@ export default class TagsColorFilesPlugin extends Plugin {
 					const file = this.app.vault.getAbstractFileByPath(path);
 					if (file instanceof TFile) {
 						const cache = this.app.metadataCache.getFileCache(file);
-						const fileTags = cache ? getAllTags(cache) : null;
+						const fileTags = cache ? getAllTags(cache) ?? [] : [];
 						this.cleanElement(el);
-						if (!fileTags || this.settings.tagColors.length === 0) return;
+						if (this.settings.tagColors.length === 0) return;
 						const matchedColors: string[] = [];
 						for (const config of this.settings.tagColors) {
 							if (!config.tag) continue;
 							const normalizedConfig = config.tag.replace(/^#/, '').toLowerCase();
-							if (fileTags.some(t => t.replace(/^#/, '').toLowerCase() === normalizedConfig)) {
+							const hasTag = fileTags.some(t => t.replace(/^#/, '').toLowerCase() === normalizedConfig);
+							if (config.isNegative ? !hasTag : hasTag) {
 								matchedColors.push(config.color);
 							}
 						}
@@ -421,6 +423,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					}
 				});
 			}
+
+			const notBtn = div.createEl('button', { cls: 'clickable-icon tag-not-btn' });
+			setIcon(notBtn, config.isNegative ? 'ban' : 'check');
+			notBtn.title = config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE');
+			notBtn.onclick = () => {
+				config.isNegative = !config.isNegative;
+				setIcon(notBtn, config.isNegative ? 'ban' : 'check');
+				notBtn.title = config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE');
+				void this.plugin.saveSettings();
+			};
 
 			const cp = createEl('input');
 			cp.type = 'color';

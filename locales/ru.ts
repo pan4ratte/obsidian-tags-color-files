@@ -27,5 +27,7 @@ export default {
     ADD_RULE_BTN: 'Новое правило',
     TAG_PLACEHOLDER: 'Введите тег (регистр не учитывается)',
     DUPLICATE_TAG_ERROR: 'Для этого тега уже существует правило! Выберите другой тег',
-    INVALID_TAG_ERROR: 'Некорректное имя тега'
+    INVALID_TAG_ERROR: 'Некорректное имя тега',
+    RULE_MATCH_POSITIVE: 'Содержит тег',
+    RULE_MATCH_NEGATIVE: 'НЕ содержит тег'
 };
