@@ -24,7 +24,6 @@ export default {
 	IMPORTED: "Imported successfully!",
 	INVALID_FILE: "Error: Invalid file",
 	COLORING_RULES_SECTION: "Coloring rules",
-	ADD_RULE_NAME: "Choose type of rule to create",
 	ADD_RULE_DESC: "General rules apply to all notes in the vault, folder rules apply to files in a specified folder. If a file has multiple tags, the one with the highest priority colors the file",
 	ADD_RULE_BTN: "Add general rule",
 	ADD_FOLDER_RULE_BTN: "Add folder rule",

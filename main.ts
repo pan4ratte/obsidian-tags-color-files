@@ -83,13 +83,6 @@ interface TagColorConfig {
 	folderScope?: string;
 }
 
-/** Kept only for migration of saved data from v1.6.0 / v1.6.1 */
-interface ColorRuleGroup {
-	folderScope: string;
-	scopeMode: "include" | "exclude";
-	rules: TagColorConfig[];
-}
-
 interface TagsColorFilesSettings {
 	generalRules: TagColorConfig[];
 	colorStrategy:
@@ -161,87 +154,11 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 	async loadSettings() {
 		const raw = (await this.loadData()) as Record<string, unknown> | null;
-
-		/** Normalise a raw group object (for migration only) */
-		const normalizeGroup = (g: Record<string, unknown>): ColorRuleGroup => ({
-			folderScope: (g.folderScope as string) ?? "",
-			scopeMode:
-				((g.scopeMode ?? g.folderScopeMode) as ColorRuleGroup["scopeMode"]) ??
-				"include",
-			rules: (g.rules ?? g.tagRules ?? []) as TagColorConfig[],
-		});
-
-		/**
-		 * Flatten groups into a plain TagColorConfig array, stamping each rule
-		 * with its group's folderScope.  Groups with scopeMode "exclude" become
-		 * global (no folder scope) because the new model only supports "include".
-		 */
-		const flattenGroups = (groups: ColorRuleGroup[]): TagColorConfig[] => {
-			const result: TagColorConfig[] = [];
-			for (const g of groups) {
-				const scope = g.folderScope.trim();
-				for (const r of g.rules) {
-					result.push({
-						tag: r.tag ?? "",
-						color: r.color ?? "#4a90e2",
-						isNegative: r.isNegative,
-						folderScope: g.scopeMode === "include" ? scope : "",
-					});
-				}
-			}
-			return result;
-		};
-
-		if (raw?.tagColors && !raw?.generalRules && !raw?.colorRuleGroups) {
-			// v1.5 → current: wrap flat tagColors
-			this.settings = {
-				...DEFAULT_SETTINGS,
-				colorStrategy:
-					(raw.colorStrategy as TagsColorFilesSettings["colorStrategy"]) ??
-					DEFAULT_SETTINGS.colorStrategy,
-				dotSize:
-					(raw.dotSize as TagsColorFilesSettings["dotSize"]) ??
-					DEFAULT_SETTINGS.dotSize,
-				generalRules: raw.tagColors as TagColorConfig[],
-			};
-		} else if (raw?.colorRuleGroups && !raw?.generalRules) {
-			// v1.6.0 → current: flatten colorRuleGroups with per-rule folder scopes
-			const groups = (raw.colorRuleGroups as Record<string, unknown>[]).map(
-				normalizeGroup,
-			);
-			this.settings = {
-				...DEFAULT_SETTINGS,
-				colorStrategy:
-					(raw.colorStrategy as TagsColorFilesSettings["colorStrategy"]) ??
-					DEFAULT_SETTINGS.colorStrategy,
-				dotSize:
-					(raw.dotSize as TagsColorFilesSettings["dotSize"]) ??
-					DEFAULT_SETTINGS.dotSize,
-				generalRules: flattenGroups(groups),
-			};
-		} else {
-			// Current (or v1.6.1 with separate folderGroups)
-			this.settings = Object.assign(
-				{},
-				DEFAULT_SETTINGS,
-				raw as Partial<TagsColorFilesSettings>,
-			);
-			// Migrate v1.6.1 folderGroups → merge into generalRules
-			const legacyFolderGroups = raw?.folderGroups as
-				| Record<string, unknown>[]
-				| undefined;
-			if (Array.isArray(legacyFolderGroups) && legacyFolderGroups.length > 0) {
-				const groupRules = flattenGroups(
-					legacyFolderGroups.map(normalizeGroup),
-				);
-				this.settings.generalRules = [
-					...(this.settings.generalRules ?? []),
-					...groupRules,
-				];
-			}
-			// Remove legacy field so it is not persisted
-			delete (this.settings as unknown as Record<string, unknown>).folderGroups;
-		}
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			raw as Partial<TagsColorFilesSettings>,
+		);
 	}
 
 	async saveSettings() {
@@ -724,8 +641,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			);
 		}
 
-		// Import — accepts: current { generalRules }, v1.6.1 { generalRules, folderGroups },
-		//                   v1.6.0 ColorRuleGroup[], v1.5 flat TagColorConfig[]
 		backupSetting.addButton((btn) =>
 			btn.setButtonText(t("IMPORT")).onClick(() => {
 				const input = createEl("input");
@@ -741,93 +656,22 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							const result = event.target?.result;
 							if (typeof result === "string") {
 								const parsed: unknown = JSON.parse(result);
-
-								// Object with generalRules key (current or v1.6.1)
 								if (
 									typeof parsed === "object" &&
 									parsed !== null &&
 									!Array.isArray(parsed) &&
 									"generalRules" in (parsed as object)
 								) {
-									const obj = parsed as {
-										generalRules?: TagColorConfig[];
-										folderGroups?: ColorRuleGroup[];
-									};
-									let rules: TagColorConfig[] = Array.isArray(
-										obj.generalRules,
-									)
+									const obj = parsed as { generalRules?: TagColorConfig[] };
+									this.plugin.settings.generalRules = Array.isArray(obj.generalRules)
 										? obj.generalRules
 										: [];
-									// Merge v1.6.1 folderGroups if present
-									if (
-										Array.isArray(obj.folderGroups) &&
-										obj.folderGroups.length > 0
-									) {
-										for (const g of obj.folderGroups) {
-											const scope = (g.folderScope ?? "").trim();
-											for (const r of g.rules ?? []) {
-												rules.push({
-													...r,
-													folderScope:
-														g.scopeMode === "include"
-															? scope
-															: "",
-												});
-											}
-										}
-									}
-									this.plugin.settings.generalRules = rules;
 									void this.plugin.saveSettings();
 									this.display();
 									new Notice(t("IMPORTED"));
 									return;
 								}
-
-								if (Array.isArray(parsed)) {
-									// v1.5 flat TagColorConfig[]
-									const isOldFlat = parsed.every(
-										(item): item is TagColorConfig =>
-											typeof item === "object" &&
-											item !== null &&
-											"tag" in item &&
-											"color" in item &&
-											!("rules" in item),
-									);
-									// v1.6.0 ColorRuleGroup[]
-									const isGroupArray = parsed.every(
-										(item): item is ColorRuleGroup =>
-											typeof item === "object" &&
-											item !== null &&
-											"rules" in item &&
-											Array.isArray(
-												(item as ColorRuleGroup).rules,
-											),
-									);
-									if (isOldFlat) {
-										this.plugin.settings.generalRules = parsed;
-										void this.plugin.saveSettings();
-										this.display();
-										new Notice(t("IMPORTED"));
-									} else if (isGroupArray) {
-										const rules: TagColorConfig[] = [];
-										for (const g of parsed as ColorRuleGroup[]) {
-											const scope = (g.folderScope ?? "").trim();
-											for (const r of g.rules ?? []) {
-												rules.push({
-													...r,
-													folderScope:
-														g.scopeMode === "include"
-															? scope
-															: "",
-												});
-											}
-										}
-										this.plugin.settings.generalRules = rules;
-										void this.plugin.saveSettings();
-										this.display();
-										new Notice(t("IMPORTED"));
-									}
-								}
+								new Notice(t("INVALID_FILE"));
 							}
 						} catch (_err) {
 							new Notice(t("INVALID_FILE"));
