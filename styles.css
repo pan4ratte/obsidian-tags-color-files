@@ -79,15 +79,94 @@
     display: flex;
     flex-direction: column;
     margin-top: 16px;
-    gap: 8px;
+    gap: 4px;
 }
+
+/* --- GROUP STYLES --- */
+
+.tag-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.tag-group + .tag-group {
+    margin-top: 8px;
+}
+
+.tag-group.is-scoped {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    padding: 6px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.tag-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px;
+    cursor: default;
+}
+
+.tag-group-header.is-dragging {
+    opacity: 1;
+    outline-color: var(--interactive-accent);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-offset: 2px;
+    border-radius: var(--radius-s);
+}
+
+.tag-group-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tag-group-rules.is-indented {
+    padding-left: 8px;
+    margin-top: 4px;
+}
+
+.tag-group-empty {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-style: italic;
+    padding: 8px 12px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+.tag-group-empty.is-drop-target {
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-s);
+    outline: 2px dashed var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+.tag-group-drop-zone {
+    min-height: 6px;
+    border-radius: var(--radius-s);
+    transition: min-height 0.15s ease, background-color 0.15s ease;
+}
+
+.tag-group-drop-zone.is-active {
+    min-height: 28px;
+    background-color: var(--background-secondary);
+    outline: 2px dashed var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+/* --- TAG RULE ROW STYLES --- */
 
 .tag-rules-list .tag-color-setting-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
-    margin-top: 8px;
+    margin-bottom: 4px;
+    margin-top: 4px;
     padding: 4px;
     border: 2px solid transparent;
 }
@@ -177,4 +256,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* --- FOLDER SCOPE CONTROLS IN GROUP HEADER --- */
+
+.tag-folder-scope-btn {
+    color: var(--text-muted);
+    flex: 0 0 auto;
+}
+
+.tag-folder-input-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+
+.tag-folder-input {
+    width: 100%;
+    font-size: 0.9em;
+}
+
+.tag-folder-input::placeholder {
+    font-style: italic;
 }
