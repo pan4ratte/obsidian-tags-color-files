@@ -4,6 +4,7 @@ import {
 	debounce,
 	getAllTags,
 	type MetadataCache,
+	Menu,
 	Notice,
 	Platform,
 	Plugin,
@@ -78,8 +79,11 @@ interface TagColorConfig {
 	tag: string;
 	color: string;
 	isNegative?: boolean;
+	/** If set, this rule only applies to files inside this folder (and sub-folders) */
+	folderScope?: string;
 }
 
+/** Kept only for migration of saved data from v1.6.0 / v1.6.1 */
 interface ColorRuleGroup {
 	folderScope: string;
 	scopeMode: "include" | "exclude";
@@ -87,7 +91,7 @@ interface ColorRuleGroup {
 }
 
 interface TagsColorFilesSettings {
-	colorRuleGroups: ColorRuleGroup[];
+	generalRules: TagColorConfig[];
 	colorStrategy:
 		| "text"
 		| "background"
@@ -99,7 +103,7 @@ interface TagsColorFilesSettings {
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
-	colorRuleGroups: [{ folderScope: "", scopeMode: "include", rules: [] }],
+	generalRules: [],
 	colorStrategy: "text",
 	dotSize: "default",
 };
@@ -157,8 +161,39 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 	async loadSettings() {
 		const raw = (await this.loadData()) as Record<string, unknown> | null;
-		if (raw?.tagColors && !raw?.colorRuleGroups) {
-			// Migrate v1.5: wrap old flat tagColors into a single global group
+
+		/** Normalise a raw group object (for migration only) */
+		const normalizeGroup = (g: Record<string, unknown>): ColorRuleGroup => ({
+			folderScope: (g.folderScope as string) ?? "",
+			scopeMode:
+				((g.scopeMode ?? g.folderScopeMode) as ColorRuleGroup["scopeMode"]) ??
+				"include",
+			rules: (g.rules ?? g.tagRules ?? []) as TagColorConfig[],
+		});
+
+		/**
+		 * Flatten groups into a plain TagColorConfig array, stamping each rule
+		 * with its group's folderScope.  Groups with scopeMode "exclude" become
+		 * global (no folder scope) because the new model only supports "include".
+		 */
+		const flattenGroups = (groups: ColorRuleGroup[]): TagColorConfig[] => {
+			const result: TagColorConfig[] = [];
+			for (const g of groups) {
+				const scope = g.folderScope.trim();
+				for (const r of g.rules) {
+					result.push({
+						tag: r.tag ?? "",
+						color: r.color ?? "#4a90e2",
+						isNegative: r.isNegative,
+						folderScope: g.scopeMode === "include" ? scope : "",
+					});
+				}
+			}
+			return result;
+		};
+
+		if (raw?.tagColors && !raw?.generalRules && !raw?.colorRuleGroups) {
+			// v1.5 → current: wrap flat tagColors
 			this.settings = {
 				...DEFAULT_SETTINGS,
 				colorStrategy:
@@ -167,38 +202,52 @@ export default class TagsColorFilesPlugin extends Plugin {
 				dotSize:
 					(raw.dotSize as TagsColorFilesSettings["dotSize"]) ??
 					DEFAULT_SETTINGS.dotSize,
-				colorRuleGroups: [
-					{
-						folderScope: "",
-						scopeMode: "include",
-						rules: raw.tagColors as TagColorConfig[],
-					},
-				],
+				generalRules: raw.tagColors as TagColorConfig[],
+			};
+		} else if (raw?.colorRuleGroups && !raw?.generalRules) {
+			// v1.6.0 → current: flatten colorRuleGroups with per-rule folder scopes
+			const groups = (raw.colorRuleGroups as Record<string, unknown>[]).map(
+				normalizeGroup,
+			);
+			this.settings = {
+				...DEFAULT_SETTINGS,
+				colorStrategy:
+					(raw.colorStrategy as TagsColorFilesSettings["colorStrategy"]) ??
+					DEFAULT_SETTINGS.colorStrategy,
+				dotSize:
+					(raw.dotSize as TagsColorFilesSettings["dotSize"]) ??
+					DEFAULT_SETTINGS.dotSize,
+				generalRules: flattenGroups(groups),
 			};
 		} else {
+			// Current (or v1.6.1 with separate folderGroups)
 			this.settings = Object.assign(
 				{},
 				DEFAULT_SETTINGS,
 				raw as Partial<TagsColorFilesSettings>,
 			);
+			// Migrate v1.6.1 folderGroups → merge into generalRules
+			const legacyFolderGroups = raw?.folderGroups as
+				| Record<string, unknown>[]
+				| undefined;
+			if (Array.isArray(legacyFolderGroups) && legacyFolderGroups.length > 0) {
+				const groupRules = flattenGroups(
+					legacyFolderGroups.map(normalizeGroup),
+				);
+				this.settings.generalRules = [
+					...(this.settings.generalRules ?? []),
+					...groupRules,
+				];
+			}
+			// Remove legacy field so it is not persisted
+			delete (this.settings as unknown as Record<string, unknown>).folderGroups;
 		}
-		// Normalize groups: handle legacy field names (tagRules→rules, folderScopeMode→scopeMode)
-		// and fill in any missing required fields with safe defaults
-		this.settings.colorRuleGroups = (
-			this.settings.colorRuleGroups as unknown as Record<string, unknown>[]
-		).map((g) => ({
-			folderScope: (g.folderScope as string) ?? "",
-			scopeMode:
-				((g.scopeMode ?? g.folderScopeMode) as ColorRuleGroup["scopeMode"]) ??
-				"include",
-			rules: (g.rules ?? g.tagRules ?? []) as TagColorConfig[],
-		}));
 	}
 
 	async saveSettings() {
-		for (const group of this.settings.colorRuleGroups) {
-			group.rules = group.rules.filter((r) => r.tag && r.tag.trim() !== "");
-		}
+		this.settings.generalRules = this.settings.generalRules.filter(
+			(r) => r.tag && r.tag.trim() !== "",
+		);
 		await this.saveData(this.settings);
 		this.updateFileColors();
 	}
@@ -230,23 +279,19 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 	private _updateFileColors() {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
-		// Pre-normalize rules and folder scopes for all groups once per cycle
-		const normalizedGroups = this.settings.colorRuleGroups.map((group) => ({
-			folderScope: (group.folderScope ?? "").trim(),
-			scopeMode: group.scopeMode ?? "include",
-			rules: (group.rules ?? [])
-				.filter((c) => c.tag)
-				.map((c) => ({
-					...c,
-					_normalized: c.tag.replace(/^#/, "").toLowerCase(),
-				})),
-		}));
+
+		// Pre-normalize rules once per cycle
+		const normalizedRules = this.settings.generalRules
+			.filter((c) => c.tag)
+			.map((c) => ({
+				...c,
+				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
+				_folderScope: (c.folderScope ?? "").trim(),
+			}));
 
 		fileExplorers.forEach((leaf) => {
 			const navFiles =
-				leaf.view.containerEl.querySelectorAll<HTMLElement>(
-					".nav-file-title",
-				);
+				leaf.view.containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
 			navFiles.forEach((el) => {
 				const path = el.getAttribute("data-path");
 				if (!path) return;
@@ -257,34 +302,29 @@ export default class TagsColorFilesPlugin extends Plugin {
 				this.cleanElement(el);
 				const fileFolder = file.parent?.path ?? "";
 				const matchedColors: string[] = [];
-				for (const group of normalizedGroups) {
-					// Determine if this group's folder scope applies to the file
-					const scope = group.folderScope;
-					let applies: boolean;
-					if (scope === "") {
-						applies = true;
-					} else {
+
+				for (const rule of normalizedRules) {
+					// Per-rule folder scope check (empty = applies everywhere)
+					if (rule._folderScope) {
 						const inScope =
-							fileFolder === scope || fileFolder.startsWith(scope + "/");
-						applies = group.scopeMode === "include" ? inScope : !inScope;
+							fileFolder === rule._folderScope ||
+							fileFolder.startsWith(rule._folderScope + "/");
+						if (!inScope) continue;
 					}
-					if (!applies) continue;
-					for (const rule of group.rules) {
-						const hasTag = fileTags.some(
-							(tag) =>
-								tag.replace(/^#/, "").toLowerCase() === rule._normalized,
-						);
-						if (rule.isNegative ? !hasTag : hasTag) {
-							matchedColors.push(rule.color);
-						}
+					const hasTag = fileTags.some(
+						(tag) =>
+							tag.replace(/^#/, "").toLowerCase() === rule._normalized,
+					);
+					if (rule.isNegative ? !hasTag : hasTag) {
+						matchedColors.push(rule.color);
 					}
 				}
+
 				if (matchedColors.length > 0) {
 					el.classList.add("colored-tag-file");
 					el.classList.add(`strategy-${this.settings.colorStrategy}`);
 					el.style.setProperty("--tag-file-color", matchedColors[0]);
 
-					// Check if the current strategy involves dots
 					const strategiesWithDots = [
 						"before-text",
 						"after-text",
@@ -293,25 +333,15 @@ export default class TagsColorFilesPlugin extends Plugin {
 					];
 					if (strategiesWithDots.includes(this.settings.colorStrategy)) {
 						const dotsContainer = createDiv();
-
-						// Is element inside a folder
 						const hasNavFileParent = !!el.closest("div.nav-folder");
-						// Determine if dots are before or after based on the strategy name
 						const isBefore =
 							this.settings.colorStrategy.includes("before-text");
-
-						// Determine a dot container class according to strategy
-						let positionClass: string;
-						if (isBefore) {
-							positionClass = hasNavFileParent
+						const positionClass = isBefore
+							? hasNavFileParent
 								? "is-before"
-								: "is-before-root";
-						} else {
-							positionClass = "is-after";
-						}
-
+								: "is-before-root"
+							: "is-after";
 						dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
-
 						matchedColors.slice(0, 3).forEach((color, i) => {
 							const dot = createDiv();
 							dot.className = "tag-dot";
@@ -334,6 +364,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	focusPending: number | null = null;
 	ruleElements: { txt: HTMLInputElement; error: HTMLElement; groupIdx: number }[] =
 		[];
+
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) {
 		super(app, plugin);
@@ -375,6 +406,238 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		}
 	}
 
+	/**
+	 * Render a single rule row (+ its collapsible filter panel) into `container`.
+	 * groupIdx is always -1 (single general-rules section).
+	 */
+	private renderRuleRow(
+		container: HTMLDivElement,
+		config: TagColorConfig,
+		ruleIdx: number,
+		groupIdx: number,
+		rulesArray: TagColorConfig[],
+	) {
+		const div = container.createDiv({ cls: "tag-color-setting-item" });
+
+		// Declare txt early so drag-handler closures can reference it
+		const txt = createEl("input");
+		txt.type = "text";
+		txt.value = config.tag;
+		txt.placeholder = t("TAG_PLACEHOLDER");
+
+		if (Platform.isMobile) {
+			const reorderContainer = div.createDiv({ cls: "tag-reorder-arrows" });
+			const upBtn = reorderContainer.createEl("button", {
+				cls: "clickable-icon",
+			});
+			setIcon(upBtn, "arrow-up");
+			upBtn.onclick = () => {
+				if (ruleIdx > 0) {
+					const moved = rulesArray.splice(ruleIdx, 1)[0];
+					rulesArray.splice(ruleIdx - 1, 0, moved);
+					void this.plugin.saveSettings();
+					this.display();
+				}
+			};
+			const downBtn = reorderContainer.createEl("button", {
+				cls: "clickable-icon",
+			});
+			setIcon(downBtn, "arrow-down");
+			downBtn.onclick = () => {
+				if (ruleIdx < rulesArray.length - 1) {
+					const moved = rulesArray.splice(ruleIdx, 1)[0];
+					rulesArray.splice(ruleIdx + 1, 0, moved);
+					void this.plugin.saveSettings();
+					this.display();
+				}
+			};
+		} else {
+			if (
+				this.draggingGroupIdx === groupIdx &&
+				this.draggingRuleIdx === ruleIdx
+			) {
+				div.addClass("is-dragging");
+			}
+			div.draggable = true;
+			const dragHandle = div.createDiv({ cls: "clickable-icon drag-handle" });
+			setIcon(dragHandle, "lucide-grip-vertical");
+
+			div.addEventListener("dragstart", () => {
+				this.validateGroupTags(groupIdx);
+				// Update config in-memory only — do NOT call saveSettings() here.
+				// saveSettings() replaces generalRules with a new filtered array, which
+				// detaches the `rulesArray` closure reference and breaks dragover.
+				if (!txt.classList.contains("is-invalid") && txt.value.trim() !== "") {
+					config.tag = txt.value;
+				}
+				this.draggingGroupIdx = groupIdx;
+				this.draggingRuleIdx = ruleIdx;
+				div.addClass("is-dragging");
+			});
+
+			div.addEventListener("dragend", () => {
+				this.draggingGroupIdx = null;
+				this.draggingRuleIdx = null;
+				div.removeClass("is-dragging");
+				this.display();
+			});
+
+			div.addEventListener("dragover", (e) => {
+				e.preventDefault();
+				if (
+					this.draggingGroupIdx === groupIdx &&
+					this.draggingRuleIdx !== null &&
+					this.draggingRuleIdx !== ruleIdx
+				) {
+					const moved = rulesArray.splice(this.draggingRuleIdx, 1)[0];
+					rulesArray.splice(ruleIdx, 0, moved);
+					this.draggingRuleIdx = ruleIdx;
+					void this.plugin.saveSettings();
+					this.display();
+				}
+			});
+		}
+
+		// ── Color picker (first in row) ───────────────────────────────────────
+		const cp = createEl("input");
+		cp.type = "color";
+		cp.value = config.color;
+		cp.addClass("tag-color-picker-input");
+		cp.onchange = (e: Event) => {
+			config.color = (e.target as HTMLInputElement).value;
+			void this.plugin.saveSettings();
+		};
+		div.appendChild(cp);
+
+		// ── Operator button (contains / doesn't contain) ──────────────────────
+		// Matches Obsidian's native "combobox-button filter-operator" element 1:1
+		const operatorBtn = div.createDiv({
+			cls: "combobox-button filter-operator",
+			attr: { tabindex: "0" },
+		});
+		operatorBtn.createDiv({ cls: "combobox-button-icon" });
+		const operatorLabel = operatorBtn.createDiv({ cls: "combobox-button-label" });
+		operatorLabel.setText(
+			config.isNegative ? t("OPERATOR_NOT_CONTAINS") : t("OPERATOR_CONTAINS"),
+		);
+		const operatorClearEl = operatorBtn.createDiv({ cls: "combobox-clear-button" });
+		setIcon(operatorClearEl, "lucide-x");
+		const operatorChevronEl = operatorBtn.createDiv({ cls: "combobox-button-chevron" });
+		setIcon(operatorChevronEl, "lucide-chevrons-up-down");
+		operatorBtn.addEventListener("click", (e: MouseEvent) => {
+			const menu = new Menu();
+			menu.addItem((item) =>
+				item
+					.setTitle(t("OPERATOR_CONTAINS"))
+					.setChecked(!config.isNegative)
+					.onClick(() => {
+						config.isNegative = false;
+						operatorLabel.setText(t("OPERATOR_CONTAINS"));
+						void this.plugin.saveSettings();
+					}),
+			);
+			menu.addItem((item) =>
+				item
+					.setTitle(t("OPERATOR_NOT_CONTAINS"))
+					.setChecked(!!config.isNegative)
+					.onClick(() => {
+						config.isNegative = true;
+						operatorLabel.setText(t("OPERATOR_NOT_CONTAINS"));
+						void this.plugin.saveSettings();
+					}),
+			);
+			const rect = operatorBtn.getBoundingClientRect();
+			menu.showAtPosition({ x: rect.left, y: rect.bottom });
+		});
+
+		// ── Tag text input ─────────────────────────────────────────────────────
+		const inputContainer = div.createDiv({ cls: "tag-input-container" });
+		const fieldWrapper = inputContainer.createDiv({
+			cls: "tag-input-field-wrapper",
+		});
+		fieldWrapper.appendChild(txt);
+		new TagSuggest(this.app, txt);
+
+		// ── Folder input (folder rules only) ──────────────────────────────────
+		// Lives inside inputContainer so it inherits the same flex width as txt.
+		if (config.folderScope !== undefined) {
+			const folderInput = inputContainer.createEl("input");
+			folderInput.type = "text";
+			folderInput.value = config.folderScope ?? "";
+			folderInput.placeholder = t("FILTER_FOLDER_PLACEHOLDER");
+			folderInput.addClass("tag-folder-scope-input");
+			new FolderSuggest(this.app, folderInput);
+
+			const debouncedFolderSave = debounce(
+				async () => {
+					config.folderScope = folderInput.value.trim();
+					await this.plugin.saveSettings();
+				},
+				400,
+				true,
+			);
+			folderInput.oninput = () => { debouncedFolderSave(); };
+			folderInput.onchange = (e: Event) => {
+				config.folderScope = (e.target as HTMLInputElement).value.trim();
+				void this.plugin.saveSettings();
+			};
+		}
+
+		const errorMsg = inputContainer.createDiv({ cls: "tag-error-message" });
+		this.ruleElements.push({ txt, error: errorMsg, groupIdx });
+
+		const debouncedSave = debounce(
+			async () => {
+				if (txt.value.trim() !== "") {
+					config.tag = txt.value;
+					await this.plugin.saveSettings();
+				}
+			},
+			400,
+			true,
+		);
+
+		txt.oninput = () => {
+			this.validateGroupTags(groupIdx);
+			debouncedSave();
+		};
+
+		txt.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (e.key === "Enter") {
+				this.validateGroupTags(groupIdx);
+				if (!txt.classList.contains("is-invalid")) {
+					config.tag = txt.value;
+					void this.plugin.saveSettings();
+					txt.blur();
+				}
+			}
+		});
+
+		txt.onchange = (e: Event) => {
+			config.tag = (e.target as HTMLInputElement).value;
+			this.validateGroupTags(groupIdx);
+			void this.plugin.saveSettings();
+		};
+
+		txt.addEventListener("blur", () => {
+			if (!txt.value || txt.value.trim() === "") {
+				rulesArray.splice(ruleIdx, 1);
+				void this.plugin.saveSettings();
+				this.display();
+			}
+		});
+
+		// ── Delete rule button ─────────────────────────────────────────────────
+		const del = div.createEl("button", { cls: "clickable-icon" });
+		setIcon(del, "trash");
+		del.onclick = () => {
+			rulesArray.splice(ruleIdx, 1);
+			void this.plugin.saveSettings();
+			this.display();
+		};
+
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -401,7 +664,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.addOption("background", t("COLOR_BG"))
 					.addOption("before-text", t("COLOR_DOTS_BEFORE"))
 					.addOption("after-text", t("COLOR_DOTS_AFTER"))
-					// Added new options
 					.addOption("dots-before-text", t("COLOR_DOTS_BEFORE_TEXT"))
 					.addOption("dots-after-text", t("COLOR_DOTS_AFTER_TEXT"))
 					.setValue(this.plugin.settings.colorStrategy)
@@ -413,7 +675,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// Check if current strategy is one of the dot strategies to show dot size settings
 		const strategiesWithDots = [
 			"before-text",
 			"after-text",
@@ -441,12 +702,11 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		// Backup section
 		const backupSetting = new Setting(containerEl).setName(t("BACKUP_RESTORE"));
 
-		// Only show EXPORT button if NOT on mobile
 		if (!Platform.isMobile) {
 			backupSetting.addButton((btn) =>
 				btn.setButtonText(t("EXPORT")).onClick(() => {
 					const data = JSON.stringify(
-						this.plugin.settings.colorRuleGroups,
+						{ generalRules: this.plugin.settings.generalRules },
 						null,
 						2,
 					);
@@ -464,7 +724,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			);
 		}
 
-		// Import button — accepts both old flat format and new groups format
+		// Import — accepts: current { generalRules }, v1.6.1 { generalRules, folderGroups },
+		//                   v1.6.0 ColorRuleGroup[], v1.5 flat TagColorConfig[]
 		backupSetting.addButton((btn) =>
 			btn.setButtonText(t("IMPORT")).onClick(() => {
 				const input = createEl("input");
@@ -480,8 +741,51 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							const result = event.target?.result;
 							if (typeof result === "string") {
 								const parsed: unknown = JSON.parse(result);
+
+								// Object with generalRules key (current or v1.6.1)
+								if (
+									typeof parsed === "object" &&
+									parsed !== null &&
+									!Array.isArray(parsed) &&
+									"generalRules" in (parsed as object)
+								) {
+									const obj = parsed as {
+										generalRules?: TagColorConfig[];
+										folderGroups?: ColorRuleGroup[];
+									};
+									let rules: TagColorConfig[] = Array.isArray(
+										obj.generalRules,
+									)
+										? obj.generalRules
+										: [];
+									// Merge v1.6.1 folderGroups if present
+									if (
+										Array.isArray(obj.folderGroups) &&
+										obj.folderGroups.length > 0
+									) {
+										for (const g of obj.folderGroups) {
+											const scope = (g.folderScope ?? "").trim();
+											for (const r of g.rules ?? []) {
+												rules.push({
+													...r,
+													folderScope:
+														g.scopeMode === "include"
+															? scope
+															: "",
+												});
+											}
+										}
+									}
+									this.plugin.settings.generalRules = rules;
+									void this.plugin.saveSettings();
+									this.display();
+									new Notice(t("IMPORTED"));
+									return;
+								}
+
 								if (Array.isArray(parsed)) {
-									const isOldFormat = parsed.every(
+									// v1.5 flat TagColorConfig[]
+									const isOldFlat = parsed.every(
 										(item): item is TagColorConfig =>
 											typeof item === "object" &&
 											item !== null &&
@@ -489,7 +793,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 											"color" in item &&
 											!("rules" in item),
 									);
-									const isNewFormat = parsed.every(
+									// v1.6.0 ColorRuleGroup[]
+									const isGroupArray = parsed.every(
 										(item): item is ColorRuleGroup =>
 											typeof item === "object" &&
 											item !== null &&
@@ -498,19 +803,26 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 												(item as ColorRuleGroup).rules,
 											),
 									);
-									if (isOldFormat) {
-										this.plugin.settings.colorRuleGroups = [
-											{
-												folderScope: "",
-												scopeMode: "include",
-												rules: parsed,
-											},
-										];
+									if (isOldFlat) {
+										this.plugin.settings.generalRules = parsed;
 										void this.plugin.saveSettings();
 										this.display();
 										new Notice(t("IMPORTED"));
-									} else if (isNewFormat) {
-										this.plugin.settings.colorRuleGroups = parsed;
+									} else if (isGroupArray) {
+										const rules: TagColorConfig[] = [];
+										for (const g of parsed as ColorRuleGroup[]) {
+											const scope = (g.folderScope ?? "").trim();
+											for (const r of g.rules ?? []) {
+												rules.push({
+													...r,
+													folderScope:
+														g.scopeMode === "include"
+															? scope
+															: "",
+												});
+											}
+										}
+										this.plugin.settings.generalRules = rules;
 										void this.plugin.saveSettings();
 										this.display();
 										new Notice(t("IMPORTED"));
@@ -527,368 +839,68 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			}),
 		);
 
-		containerEl.createEl("hr");
-
-		new Setting(containerEl).setName(t("RULES_SECTION")).setHeading();
-
+		// ════════════════════════════════════
+		// Coloring rules section
+		// ════════════════════════════════════
 		new Setting(containerEl)
-			.setName(t("ADD_RULE_NAME"))
-			.setDesc(t("ADD_RULE_DESC"))
+			.setName(t("COLORING_RULES_SECTION"))
+			.setHeading()
 			.addButton((btn) =>
 				btn
 					.setButtonText(t("ADD_RULE_BTN"))
 					.setCta()
 					.onClick(() => {
-						this.plugin.settings.colorRuleGroups[0].rules.unshift({
+						this.plugin.settings.generalRules.unshift({
 							tag: "",
 							color: "#4a90e2",
 						});
-						this.focusPending = 0;
+						this.focusPending = -1;
 						this.display();
 					}),
 			)
 			.addButton((btn) =>
-				btn.setButtonText(t("ADD_FOLDER_SCOPE_BTN")).onClick(() => {
-					this.plugin.settings.colorRuleGroups.push({
-						folderScope: "",
-						scopeMode: "include",
-						rules: [],
-					});
-					void this.plugin.saveSettings();
-					this.display();
-				}),
-			);
-
-		const groupsContainer = containerEl.createDiv({ cls: "tag-groups-list" });
-
-		this.plugin.settings.colorRuleGroups.forEach((group, groupIdx) => {
-			const groupDiv = groupsContainer.createDiv({ cls: "tag-scope-group" });
-
-			// ── Group header ──
-			const headerDiv = groupDiv.createDiv({ cls: "tag-scope-group-header" });
-
-			// Group reorder arrows (both mobile and desktop)
-			const groupReorderDiv = headerDiv.createDiv({
-				cls: "tag-reorder-arrows",
-			});
-			const groupUpBtn = groupReorderDiv.createEl("button", {
-				cls: "clickable-icon",
-			});
-			setIcon(groupUpBtn, "arrow-up");
-			groupUpBtn.onclick = () => {
-				if (groupIdx > 0) {
-					const moved = this.plugin.settings.colorRuleGroups.splice(
-						groupIdx,
-						1,
-					)[0];
-					this.plugin.settings.colorRuleGroups.splice(
-						groupIdx - 1,
-						0,
-						moved,
-					);
-					void this.plugin.saveSettings();
-					this.display();
-				}
-			};
-			const groupDownBtn = groupReorderDiv.createEl("button", {
-				cls: "clickable-icon",
-			});
-			setIcon(groupDownBtn, "arrow-down");
-			groupDownBtn.onclick = () => {
-				if (groupIdx < this.plugin.settings.colorRuleGroups.length - 1) {
-					const moved = this.plugin.settings.colorRuleGroups.splice(
-						groupIdx,
-						1,
-					)[0];
-					this.plugin.settings.colorRuleGroups.splice(
-						groupIdx + 1,
-						0,
-						moved,
-					);
-					void this.plugin.saveSettings();
-					this.display();
-				}
-			};
-
-			// Folder path input with autocomplete
-			const folderInput = createEl("input");
-			folderInput.type = "text";
-			folderInput.value = group.folderScope;
-			folderInput.placeholder = t("FOLDER_PLACEHOLDER");
-			folderInput.addClass("tag-folder-scope-input");
-			headerDiv.appendChild(folderInput);
-			new FolderSuggest(this.app, folderInput);
-			folderInput.oninput = () => {
-				group.folderScope = folderInput.value;
-				void this.plugin.saveSettings();
-			};
-
-			// Scope mode toggle (include / exclude)
-			const scopeToggle = headerDiv.createEl("button", {
-				cls: "clickable-icon",
-			});
-			setIcon(
-				scopeToggle,
-				group.scopeMode === "include" ? "folder-input" : "folder-minus",
-			);
-			setTooltip(
-				scopeToggle,
-				group.scopeMode === "include"
-					? t("FOLDER_SCOPE_INCLUDE")
-					: t("FOLDER_SCOPE_EXCLUDE"),
-			);
-			scopeToggle.onclick = () => {
-				group.scopeMode =
-					group.scopeMode === "include" ? "exclude" : "include";
-				void this.plugin.saveSettings();
-				this.display();
-			};
-
-			// Delete group button
-			const delGroupBtn = headerDiv.createEl("button", {
-				cls: "clickable-icon",
-			});
-			setIcon(delGroupBtn, "trash");
-			setTooltip(delGroupBtn, t("DELETE_GROUP"));
-			delGroupBtn.onclick = () => {
-				if (this.plugin.settings.colorRuleGroups.length === 1) {
-					// Cannot remove the last group — clear its rules instead
-					this.plugin.settings.colorRuleGroups[0].rules = [];
-					void this.plugin.saveSettings();
-					this.display();
-				} else {
-					this.plugin.settings.colorRuleGroups.splice(groupIdx, 1);
-					void this.plugin.saveSettings();
-					this.display();
-				}
-			};
-
-			// ── Rules list ──
-			const rulesContainer = groupDiv.createDiv({ cls: "tag-rules-list" });
-
-			if (group.rules.length === 0) {
-				rulesContainer.createDiv({
-					cls: "tag-group-empty-msg",
-					text: t("GROUP_EMPTY"),
-				});
-			}
-
-			group.rules.forEach((config, ruleIdx) => {
-				const div = rulesContainer.createDiv({
-					cls: "tag-color-setting-item",
-				});
-
-				if (Platform.isMobile) {
-					const reorderContainer = div.createDiv({
-						cls: "tag-reorder-arrows",
-					});
-					const upBtn = reorderContainer.createEl("button", {
-						cls: "clickable-icon",
-					});
-					setIcon(upBtn, "arrow-up");
-					upBtn.onclick = () => {
-						if (ruleIdx > 0) {
-							const moved = group.rules.splice(ruleIdx, 1)[0];
-							group.rules.splice(ruleIdx - 1, 0, moved);
-							void this.plugin.saveSettings();
-							this.display();
-						}
-					};
-					const downBtn = reorderContainer.createEl("button", {
-						cls: "clickable-icon",
-					});
-					setIcon(downBtn, "arrow-down");
-					downBtn.onclick = () => {
-						if (ruleIdx < group.rules.length - 1) {
-							const moved = group.rules.splice(ruleIdx, 1)[0];
-							group.rules.splice(ruleIdx + 1, 0, moved);
-							void this.plugin.saveSettings();
-							this.display();
-						}
-					};
-				} else {
-					if (
-						this.draggingGroupIdx === groupIdx &&
-						this.draggingRuleIdx === ruleIdx
-					) {
-						div.addClass("is-dragging");
-					}
-					div.draggable = true;
-					const dragHandle = div.createDiv({
-						cls: "clickable-icon drag-handle",
-					});
-					setIcon(dragHandle, "lucide-grip-vertical");
-
-					div.addEventListener("dragstart", () => {
-						this.validateGroupTags(groupIdx);
-						if (
-							!txt.classList.contains("is-invalid") &&
-							txt.value.trim() !== ""
-						) {
-							config.tag = txt.value;
-							void this.plugin.saveSettings();
-						}
-						this.draggingGroupIdx = groupIdx;
-						this.draggingRuleIdx = ruleIdx;
-						div.addClass("is-dragging");
-					});
-
-					div.addEventListener("dragend", () => {
-						this.draggingGroupIdx = null;
-						this.draggingRuleIdx = null;
-						div.removeClass("is-dragging");
+				btn
+					.setButtonText(t("ADD_FOLDER_RULE_BTN"))
+					.onClick(() => {
+						this.plugin.settings.generalRules.unshift({
+							tag: "",
+							color: "#4a90e2",
+							folderScope: "",
+						});
+						this.focusPending = -1;
 						this.display();
-					});
+					}),
+			);
 
-					div.addEventListener("dragover", (e) => {
-						e.preventDefault();
-						if (
-							this.draggingGroupIdx === groupIdx &&
-							this.draggingRuleIdx !== null &&
-							this.draggingRuleIdx !== ruleIdx
-						) {
-							const moved = group.rules.splice(
-								this.draggingRuleIdx,
-								1,
-							)[0];
-							group.rules.splice(ruleIdx, 0, moved);
-							this.draggingRuleIdx = ruleIdx;
-							void this.plugin.saveSettings();
-							this.display();
-						}
-					});
-				}
-
-				// Negative / positive match toggle
-				const notBtn = div.createEl("button", {
-					cls: "clickable-icon tag-not-btn",
-				});
-				setIcon(notBtn, config.isNegative ? "ban" : "check");
-				setTooltip(
-					notBtn,
-					config.isNegative
-						? t("RULE_MATCH_NEGATIVE")
-						: t("RULE_MATCH_POSITIVE"),
-				);
-				notBtn.onclick = () => {
-					config.isNegative = !config.isNegative;
-					setIcon(notBtn, config.isNegative ? "ban" : "check");
-					setTooltip(
-						notBtn,
-						config.isNegative
-							? t("RULE_MATCH_NEGATIVE")
-							: t("RULE_MATCH_POSITIVE"),
-					);
-					void this.plugin.saveSettings();
-				};
-
-				// Color picker
-				const cp = createEl("input");
-				cp.type = "color";
-				cp.value = config.color;
-				cp.addClass("tag-color-picker-input");
-				cp.onchange = (e: Event) => {
-					config.color = (e.target as HTMLInputElement).value;
-					void this.plugin.saveSettings();
-				};
-				div.appendChild(cp);
-
-				// Tag text input
-				const inputContainer = div.createDiv({ cls: "tag-input-container" });
-				const fieldWrapper = inputContainer.createDiv({
-					cls: "tag-input-field-wrapper",
-				});
-
-				const txt = createEl("input");
-				txt.type = "text";
-				txt.value = config.tag;
-				txt.placeholder = t("TAG_PLACEHOLDER");
-				fieldWrapper.appendChild(txt);
-
-				const errorMsg = inputContainer.createDiv({
-					cls: "tag-error-message",
-				});
-				this.ruleElements.push({ txt, error: errorMsg, groupIdx });
-				new TagSuggest(this.app, txt);
-
-				const debouncedSave = debounce(
-					async () => {
-						if (txt.value.trim() !== "") {
-							config.tag = txt.value;
-							await this.plugin.saveSettings();
-						}
-					},
-					400,
-					true,
-				);
-
-				txt.oninput = () => {
-					this.validateGroupTags(groupIdx);
-					debouncedSave();
-				};
-
-				txt.addEventListener("keydown", (e: KeyboardEvent) => {
-					if (e.key === "Enter") {
-						this.validateGroupTags(groupIdx);
-						if (!txt.classList.contains("is-invalid")) {
-							config.tag = txt.value;
-							void this.plugin.saveSettings();
-							txt.blur();
-						}
-					}
-				});
-
-				txt.onchange = (e: Event) => {
-					config.tag = (e.target as HTMLInputElement).value;
-					this.validateGroupTags(groupIdx);
-					void this.plugin.saveSettings();
-				};
-
-				txt.addEventListener("blur", () => {
-					if (!txt.value || txt.value.trim() === "") {
-						group.rules.splice(ruleIdx, 1);
-						void this.plugin.saveSettings();
-						this.display();
-					}
-				});
-
-				// Delete rule button
-				const del = div.createEl("button", { cls: "clickable-icon" });
-				setIcon(del, "trash");
-				del.onclick = () => {
-					group.rules.splice(ruleIdx, 1);
-					void this.plugin.saveSettings();
-					this.display();
-				};
-			});
-
-			// "Add rule to this group" footer
-			const addRuleDiv = groupDiv.createDiv({ cls: "tag-group-add-rule" });
-			const addRuleBtn = addRuleDiv.createEl("button", {
-				cls: "clickable-icon",
-			});
-			setIcon(addRuleBtn, "plus");
-			setTooltip(addRuleBtn, t("ADD_RULE_TO_GROUP"));
-			addRuleBtn.onclick = () => {
-				group.rules.unshift({ tag: "", color: "#4a90e2" });
-				this.focusPending = groupIdx;
-				this.display();
-			};
+		const generalRulesContainer = containerEl.createDiv({
+			cls: "tag-rules-list",
 		});
 
-		// Focus the first input of the pending group (if a rule was just added)
-		if (this.focusPending !== null) {
-			const targetGroupIdx = this.focusPending;
-			this.focusPending = null;
-			const target = this.ruleElements.find(
-				(e) => e.groupIdx === targetGroupIdx,
+		if (this.plugin.settings.generalRules.length === 0) {
+			generalRulesContainer.createDiv({
+				cls: "tag-group-empty-msg",
+				text: t("GROUP_EMPTY"),
+			});
+		}
+
+		this.plugin.settings.generalRules.forEach((config, ruleIdx) => {
+			this.renderRuleRow(
+				generalRulesContainer,
+				config,
+				ruleIdx,
+				-1,
+				this.plugin.settings.generalRules,
 			);
+		});
+
+		// Focus the first input if a rule was just added
+		if (this.focusPending !== null) {
+			this.focusPending = null;
+			const target = this.ruleElements.find((e) => e.groupIdx === -1);
 			target?.txt.focus();
 		}
 
-		// Run validation for every group
-		for (let i = 0; i < this.plugin.settings.colorRuleGroups.length; i++) {
-			this.validateGroupTags(i);
-		}
+		// Validate
+		this.validateGroupTags(-1);
 	}
 }

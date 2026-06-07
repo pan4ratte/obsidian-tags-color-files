@@ -78,7 +78,7 @@
 .tag-rules-list {
     display: flex;
     flex-direction: column;
-    margin-top: 16px;
+    margin-top: 32px;
     gap: 8px;
 }
 
@@ -86,16 +86,17 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
-    margin-top: 8px;
-    padding: 4px;
-    border: 2px solid transparent;
+    border: 1px solid var(--setting-items-border-color);
+    border-radius: var(--setting-items-radius);
+    padding: 24px 16px;
+    background-color: var(--setting-items-background);
 }
 
 .tag-input-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex: 1;
+    gap: 12px;
 }
 
 .tag-input-field-wrapper {
@@ -162,7 +163,7 @@
     outline-color: var(--interactive-accent);
     outline-style: solid;
     outline-width: 2px;
-    outline-offset: 8px;
+    /*outline-offset: 8px;*/
     border-radius: var(--input-radius);
 }
 
@@ -180,44 +181,56 @@
 }
 
 
-/* --- GROUP / FOLDER SCOPE STYLES --- */
-
-.tag-groups-list {
-    display: flex;
-    flex-direction: column;
-    margin-top: 16px;
-    gap: 12px;
-}
-
-.tag-scope-group {
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    padding: 8px 12px 12px;
-}
-
-.tag-scope-group-header {
+/* Operator combobox-button — mirrors Obsidian's .combobox-button .filter-operator.
+   These rules serve as fallback when Bases CSS is not injected, and also enforce
+   flex-shrink + cursor that Obsidian's base rule does not explicitly set. */
+.tag-color-setting-item .combobox-button.filter-operator {
+    flex-shrink: 0;
+    cursor: pointer;
+    /* Fallback values — Obsidian's Bases CSS takes over when Bases is loaded */
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding-bottom: 8px;
-    margin-bottom: 4px;
-    border-bottom: 1px solid var(--background-modifier-border);
-    flex-wrap: wrap;
+    gap: var(--size-2-2, 4px);
+    padding: 0 var(--size-2-3, 6px) 0 var(--size-4-2, 8px);
+    min-height: var(--input-height, 28px);
+    overflow: hidden;
+    white-space: nowrap;
+    border-style: solid;
+    border-color: var(--background-modifier-border);
+    border-radius: var(--radius-s);
+}
+
+.tag-color-setting-item .combobox-button.filter-operator:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.tag-color-setting-item .combobox-button .combobox-button-icon {
+    display: none;
+}
+
+.tag-color-setting-item .combobox-button:not(.mod-clearable) .combobox-clear-button {
+    display: none;
+}
+
+.tag-color-setting-item .combobox-button .combobox-button-chevron {
+    --icon-size: var(--icon-xs, 14px);
+    --icon-stroke: var(--icon-xs-stroke-width, 1.75);
+    display: flex;
+    align-items: center;
+}
+
+.tag-color-setting-item .combobox-button .combobox-button-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tag-folder-scope-input {
-    flex: 1;
-    min-width: 80px;
+    width: 100%;
 }
 
 .tag-group-empty-msg {
     font-size: 0.85em;
     color: var(--text-muted);
     padding: 6px 8px;
-}
-
-.tag-group-add-rule {
-    margin-top: 8px;
-    display: flex;
-    justify-content: flex-start;
 }
