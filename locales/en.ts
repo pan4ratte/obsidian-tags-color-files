@@ -1,11 +1,9 @@
 export default {
 	SETTINGS_TITLE: "Tags Color Files settings",
-	PLUGIN_DESCRIPTION:
-		"Tags Color Files highlights files in your Obsidian file explorer based on predefined coloring rules. When you add a tag that has a corresponding coloring rule to a file, the plugin automatically highlights that file in the file explorer with predefined color.",
+	PLUGIN_DESCRIPTION:"This plugin allows you to highlight files in Obsidian file explorer based on the rules predefined by you. When you add a tag that has a corresponding coloring rule to a file, the plugin automatically highlights that file in the file explorer with predefined color and in the style of your choice.",
 	GENERAL_SECTION: "General",
 	COLOR_METHOD_NAME: "Coloring method",
-	COLOR_METHOD_DESC:
-		'If any of the "Dots..." methods selected, multiple colored dots will be displayed simultaneously if the file has more than one tag with predefined coloring rule.',
+	COLOR_METHOD_DESC:'If any of the "Dots..." methods selected, multiple colored dots will be displayed simultaneously if the file has more than one tag with predefined coloring rule.',
 	COLOR_TEXT: "Text",
 	COLOR_BG: "Background",
 	COLOR_DOTS_BEFORE: "Dots before text",
@@ -28,8 +26,7 @@ export default {
 	ADD_RULE_BTN: "Add general rule",
 	ADD_FOLDER_RULE_BTN: "Add folder rule",
 	TAG_PLACEHOLDER: "Enter a tag (case-insensitive)",
-	DUPLICATE_TAG_ERROR:
-		"There is already a rule for this tag! Choose another tag.",
+	DUPLICATE_TAG_ERROR:"There is already a rule for this tag! Choose another tag.",
 	INVALID_TAG_ERROR: "Invalid tag name",
 	OPERATOR_CONTAINS: "contains",
 	OPERATOR_NOT_CONTAINS: "does not contain",

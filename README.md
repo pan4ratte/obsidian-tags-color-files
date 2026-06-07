@@ -11,15 +11,17 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 1. Automatic file highlighting in the Obsidian file explorer based on the tag-color rules that you create.
 
-2. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
+2. Creation of folder-specific rules that will color files only inside it.
 
-3. Negative highlighting. By default, every new rule highlights files with a specified tag: toggle the switch next to the input field to invert this behavior and highlight files without the tag instead.
+3. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
 
-4. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
+4. Negative highlighting. By default, every new rule highlights files with a specified tag, but you can invert this behavior and highlight files without the tag instead.
 
-5. Export and import of plugin settings to a file.
+5. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
 
-6. Localization support. Currently available languages: English and Russian.
+6. Export and import of plugin settings to a file.
+
+7. Localization support. Currently available languages: English and Russian.
 
 
 ## Plugin Use Case
@@ -27,19 +29,27 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 Initially, the plugin was created for my personal needs. When reading literature, I tag certain quotes with such tags as `#key-idea` or `#disagree` to highlight relevant thoughts. It would be more convenient for me to see such quotes in the Obsidian explorer without having to filter notes by tags in the search bar or in the tag pane. — This plugin solves exactly that problem, but I can imagine that there could be much more creative use cases for it.
 
 
-## Installation Instructions
+## Installation
 
-Before plugin appears in the official Obsidian store, the easiest way to install it is through the `BRAT` plugin:
+### Option 1: Obsidian plugin store
 
-1. Install the `BRAT` plugin from the official Obsidian plugin store.
+1. In Obsidian settings open the tab "Community plugins" and click "Browse" button.
+
+2. In the search bar type `Tags Color Files`, click on the result, then "Install" and "Enable" buttons.
+
+Alternatively, you can install the plugin by following the link to the community website: [https://community.obsidian.md/plugins/tags-color-files](https://community.obsidian.md/plugins/tags-color-files)
+
+### Option 2: BRAT plugin
+
+If you want to test beta-versions of the plugin or use previous versions, you can do that with `BRAT` plugin:
+
+1. Install `BRAT` plugin from the official Obsidian plugin store.
 
 2. In the `BRAT` settings, find the “Beta plugin list” section and click on the “Add beta plugin” button.
 
 3. In the window that appears, paste the link to the `Tags Color Files` plugin repository: [https://github.com/pan4ratte/obsidian-tags-color-files](https://github.com/pan4ratte/obsidian-tags-color-files)
 
-4. Under “Select a version” choose “Latest version” and click the “Add plugin” button.
-
-Done! The plugin will automatically install and will be ready to use.
+4. Under “Select a version” choose the desired version and click the “Add plugin” button. The plugin will be automatically installed and will be ready to use.
 
 
 ## Contributions and Roadmap
