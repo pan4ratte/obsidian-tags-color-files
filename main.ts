@@ -11,7 +11,6 @@ import {
 	PluginSettingTab,
 	Setting,
 	setIcon,
-	setTooltip,
 	TFile,
 } from "obsidian";
 import { t } from "./locales-list";

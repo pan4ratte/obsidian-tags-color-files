@@ -1,0 +1,23 @@
+{
+	"root": true,
+	"parser": "@typescript-eslint/parser",
+	"plugins": ["@typescript-eslint"],
+	"extends": [
+		"eslint:recommended",
+		"plugin:@typescript-eslint/recommended"
+	],
+	"parserOptions": {
+		"sourceType": "module"
+	},
+	"rules": {
+		"no-unused-vars": "off",
+		"@typescript-eslint/no-unused-vars": ["error", { "args": "none", "caughtErrorsIgnorePattern": "^_" }],
+		"@typescript-eslint/ban-ts-comment": "error",
+		"no-prototype-builtins": "warn",
+		"@typescript-eslint/no-explicit-any": "warn"
+	},
+	"env": {
+		"node": true
+	},
+	"ignorePatterns": ["node_modules/**", "main.js"]
+}
