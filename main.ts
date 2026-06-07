@@ -844,20 +844,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		// ════════════════════════════════════
 		new Setting(containerEl)
 			.setName(t("COLORING_RULES_SECTION"))
-			.setHeading()
-			.addButton((btn) =>
-				btn
-					.setButtonText(t("ADD_RULE_BTN"))
-					.setCta()
-					.onClick(() => {
-						this.plugin.settings.generalRules.unshift({
-							tag: "",
-							color: "#4a90e2",
-						});
-						this.focusPending = -1;
-						this.display();
-					}),
-			)
+			.setHeading();
+
+		new Setting(containerEl)
+			.setDesc(t("ADD_RULE_DESC"))
 			.addButton((btn) =>
 				btn
 					.setButtonText(t("ADD_FOLDER_RULE_BTN"))
@@ -870,18 +860,24 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						this.focusPending = -1;
 						this.display();
 					}),
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText(t("ADD_RULE_BTN"))
+					.setCta()
+					.onClick(() => {
+						this.plugin.settings.generalRules.unshift({
+							tag: "",
+							color: "#4a90e2",
+						});
+						this.focusPending = -1;
+						this.display();
+					}),
 			);
 
 		const generalRulesContainer = containerEl.createDiv({
 			cls: "tag-rules-list",
 		});
-
-		if (this.plugin.settings.generalRules.length === 0) {
-			generalRulesContainer.createDiv({
-				cls: "tag-group-empty-msg",
-				text: t("GROUP_EMPTY"),
-			});
-		}
 
 		this.plugin.settings.generalRules.forEach((config, ruleIdx) => {
 			this.renderRuleRow(

@@ -78,7 +78,7 @@
 .tag-rules-list {
     display: flex;
     flex-direction: column;
-    margin-top: 32px;
+    margin-top: 16px;
     gap: 8px;
 }
 
@@ -227,10 +227,4 @@
 
 .tag-folder-scope-input {
     width: 100%;
-}
-
-.tag-group-empty-msg {
-    font-size: 0.85em;
-    color: var(--text-muted);
-    padding: 6px 8px;
 }
