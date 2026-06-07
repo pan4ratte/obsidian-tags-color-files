@@ -26,9 +26,17 @@ export default {
 	RULES_SECTION: "Coloring rules",
 	ADD_RULE_NAME: "Add coloring rule",
 	ADD_RULE_DESC:
-		"Enter a tag and choose a highlight color. If a file has multiple tags for which there is a rule, the highest priority rule is picked for coloring: rules at the top of the list have the highest priority.",
+		"Enter a tag and choose a highlight color. Use folder scopes to group rules by folder. Rules at the top have the highest priority.",
 	ADD_RULE_BTN: "New rule",
+	ADD_FOLDER_SCOPE_BTN: "New folder scope",
+	ADD_RULE_TO_GROUP: "Add rule to this group",
+	GROUP_EMPTY: "No rules in this group. Click + to add one.",
+	GLOBAL_SCOPE: "Global (all files)",
 	TAG_PLACEHOLDER: "Enter a tag (case-insensitive)",
+	FOLDER_PLACEHOLDER: "Folder path (leave empty for all files)",
+	FOLDER_SCOPE_INCLUDE: "Only in this folder",
+	FOLDER_SCOPE_EXCLUDE: "Everywhere except this folder",
+	DELETE_GROUP: "Delete group",
 	DUPLICATE_TAG_ERROR:
 		"There is already a rule for this tag! Choose another tag.",
 	INVALID_TAG_ERROR: "Invalid tag name",

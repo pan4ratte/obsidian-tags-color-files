@@ -178,3 +178,46 @@
     align-items: center;
     justify-content: center;
 }
+
+
+/* --- GROUP / FOLDER SCOPE STYLES --- */
+
+.tag-groups-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 16px;
+    gap: 12px;
+}
+
+.tag-scope-group {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    padding: 8px 12px 12px;
+}
+
+.tag-scope-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-wrap: wrap;
+}
+
+.tag-folder-scope-input {
+    flex: 1;
+    min-width: 80px;
+}
+
+.tag-group-empty-msg {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    padding: 6px 8px;
+}
+
+.tag-group-add-rule {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-start;
+}
