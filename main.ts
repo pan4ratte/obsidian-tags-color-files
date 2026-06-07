@@ -1,31 +1,38 @@
 import {
-	App,
+	AbstractInputSuggest,
+	type App,
+	debounce,
+	getAllTags,
+	type MetadataCache,
+	Notice,
+	Platform,
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	TFile,
-	getAllTags,
-	Notice,
 	setIcon,
-	AbstractInputSuggest,
-	MetadataCache,
-	Platform,
-	debounce,
-	setTooltip
-} from 'obsidian';
-import { t } from './locales-list';
+	setTooltip,
+	TFile,
+} from "obsidian";
+import { t } from "./locales-list";
 
 // Helper class for tag suggestions
 class TagSuggest extends AbstractInputSuggest<string> {
-	constructor(app: App, public inputEl: HTMLInputElement) {
+	constructor(
+		app: App,
+		public inputEl: HTMLInputElement,
+	) {
 		super(app, inputEl);
 	}
 
 	getSuggestions(query: string): string[] {
-		const cache = this.app.metadataCache as MetadataCache & { getTags(): Record<string, number> };
+		const cache = this.app.metadataCache as MetadataCache & {
+			getTags(): Record<string, number>;
+		};
 		const allTags = Object.keys(cache.getTags());
-		const normalizedQuery = query.startsWith('#') ? query.toLowerCase() : '#' + query.toLowerCase();
-		return allTags.filter(tag => tag.toLowerCase().contains(normalizedQuery));
+		const normalizedQuery = query.startsWith("#")
+			? query.toLowerCase()
+			: `#${query.toLowerCase()}`;
+		return allTags.filter((tag) => tag.toLowerCase().contains(normalizedQuery));
 	}
 
 	renderSuggestion(tag: string, el: HTMLElement): void {
@@ -48,35 +55,51 @@ interface TagColorConfig {
 interface TagsColorFilesSettings {
 	tagColors: TagColorConfig[];
 	// Added new strategies to the type definition
-	colorStrategy: 'text' | 'background' | 'before-text' | 'after-text' | 'dots-before-text' | 'dots-after-text';
-	dotSize: 'small' | 'default' | 'big';
+	colorStrategy:
+		| "text"
+		| "background"
+		| "before-text"
+		| "after-text"
+		| "dots-before-text"
+		| "dots-after-text";
+	dotSize: "small" | "default" | "big";
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	tagColors: [],
-	colorStrategy: 'text',
-	dotSize: 'default'
+	colorStrategy: "text",
+	dotSize: "default",
 };
 
 export default class TagsColorFilesPlugin extends Plugin {
-	settings: TagsColorFilesSettings;
-	observer: MutationObserver;
+	settings!: TagsColorFilesSettings;
+	observer!: MutationObserver;
 	isUpdating = false;
 
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new TagsColorFilesSettingTab(this.app, this));
 
-		this.registerEvent(this.app.metadataCache.on('changed', () => this.updateFileColors()));
-		this.registerEvent(this.app.vault.on('rename', () => this.updateFileColors()));
-		this.registerEvent(this.app.workspace.on('layout-change', () => this.updateFileColors()));
+		this.registerEvent(
+			this.app.metadataCache.on("changed", () => this.updateFileColors()),
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", () => this.updateFileColors()),
+		);
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => this.updateFileColors()),
+		);
 
 		this.observer = new MutationObserver((mutations) => {
 			if (this.isUpdating) return;
 			let shouldUpdate = false;
 			for (const m of mutations) {
 				for (const node of Array.from(m.addedNodes)) {
-					if (node.nodeType === Node.ELEMENT_NODE && ((node as HTMLElement).classList.contains('nav-file') || (node as HTMLElement).querySelector('.nav-file-title'))) {
+					if (
+						node.nodeType === Node.ELEMENT_NODE &&
+						((node as HTMLElement).classList.contains("nav-file") ||
+							(node as HTMLElement).querySelector(".nav-file-title"))
+					) {
 						shouldUpdate = true;
 						break;
 					}
@@ -87,7 +110,10 @@ export default class TagsColorFilesPlugin extends Plugin {
 		});
 
 		this.app.workspace.onLayoutReady(() => {
-			this.observer.observe(activeDocument.body, { childList: true, subtree: true });
+			this.observer.observe(activeDocument.body, {
+				childList: true,
+				subtree: true,
+			});
 			activeWindow.setTimeout(() => this.updateFileColors(), 500);
 		});
 	}
@@ -98,36 +124,43 @@ export default class TagsColorFilesPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<TagsColorFilesSettings>);
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			(await this.loadData()) as Partial<TagsColorFilesSettings>,
+		);
 	}
 
 	async saveSettings() {
-		this.settings.tagColors = this.settings.tagColors.filter(rule => rule.tag && rule.tag.trim() !== "");
+		this.settings.tagColors = this.settings.tagColors.filter(
+			(rule) => rule.tag && rule.tag.trim() !== "",
+		);
 		await this.saveData(this.settings);
 		this.updateFileColors();
 	}
 
 	removeFileColors() {
-		const fileExplorers = this.app.workspace.getLeavesOfType('file-explorer');
+		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 		fileExplorers.forEach((leaf) => {
-			const navFiles = leaf.view.containerEl.querySelectorAll('.nav-file-title');
-			navFiles.forEach((el: HTMLElement) => this.cleanElement(el));
+			const navFiles =
+				leaf.view.containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
+			for (const el of navFiles) this.cleanElement(el);
 		});
 	}
 
 	private cleanElement(el: HTMLElement) {
 		// Added new strategy classes to remove list
 		el.classList.remove(
-			'colored-tag-file',
-			'strategy-text',
-			'strategy-background',
-			'strategy-before-text',
-			'strategy-after-text',
-			'strategy-dots-before-text',
-			'strategy-dots-after-text'
+			"colored-tag-file",
+			"strategy-text",
+			"strategy-background",
+			"strategy-before-text",
+			"strategy-after-text",
+			"strategy-dots-before-text",
+			"strategy-dots-after-text",
 		);
-		el.style.removeProperty('--tag-file-color');
-		const existingDots = el.querySelector('.tag-dots-container');
+		el.style.removeProperty("--tag-file-color");
+		const existingDots = el.querySelector(".tag-dots-container");
 		if (existingDots) existingDots.remove();
 	}
 
@@ -135,57 +168,72 @@ export default class TagsColorFilesPlugin extends Plugin {
 		if (this.isUpdating) return;
 		window.requestAnimationFrame(() => {
 			this.isUpdating = true;
-			const fileExplorers = this.app.workspace.getLeavesOfType('file-explorer');
+			const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 			fileExplorers.forEach((leaf) => {
-				const navFiles = leaf.view.containerEl.querySelectorAll('.nav-file-title');
-				navFiles.forEach((el: HTMLElement) => {
-					const path = el.getAttribute('data-path');
+				const navFiles =
+					leaf.view.containerEl.querySelectorAll<HTMLElement>(
+						".nav-file-title",
+					);
+				navFiles.forEach((el) => {
+					const path = el.getAttribute("data-path");
 					if (!path) return;
 					const file = this.app.vault.getAbstractFileByPath(path);
 					if (file instanceof TFile) {
 						const cache = this.app.metadataCache.getFileCache(file);
-						const fileTags = cache ? getAllTags(cache) ?? [] : [];
+						const fileTags = cache ? (getAllTags(cache) ?? []) : [];
 						this.cleanElement(el);
 						if (this.settings.tagColors.length === 0) return;
 						const matchedColors: string[] = [];
 						for (const config of this.settings.tagColors) {
 							if (!config.tag) continue;
-							const normalizedConfig = config.tag.replace(/^#/, '').toLowerCase();
-							const hasTag = fileTags.some(t => t.replace(/^#/, '').toLowerCase() === normalizedConfig);
+							const normalizedConfig = config.tag
+								.replace(/^#/, "")
+								.toLowerCase();
+							const hasTag = fileTags.some(
+								(t) => t.replace(/^#/, "").toLowerCase() === normalizedConfig,
+							);
 							if (config.isNegative ? !hasTag : hasTag) {
 								matchedColors.push(config.color);
 							}
 						}
 						if (matchedColors.length > 0) {
-							el.classList.add('colored-tag-file');
+							el.classList.add("colored-tag-file");
 							el.classList.add(`strategy-${this.settings.colorStrategy}`);
-							el.style.setProperty('--tag-file-color', matchedColors[0]);
+							el.style.setProperty("--tag-file-color", matchedColors[0]);
 
 							// Check if the current strategy involves dots
-							const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
+							const strategiesWithDots = [
+								"before-text",
+								"after-text",
+								"dots-before-text",
+								"dots-after-text",
+							];
 							if (strategiesWithDots.includes(this.settings.colorStrategy)) {
 								const dotsContainer = createDiv();
 
 								// Is element inside a folder
 								const hasNavFileParent = !!el.closest("div.nav-folder");
 								// Determine if dots are before or after based on the strategy name
-								const isBefore = this.settings.colorStrategy.includes('before-text');
+								const isBefore =
+									this.settings.colorStrategy.includes("before-text");
 
-                // Determine a dot container class according to strategy
-                let positionClass;
-                if (isBefore) {
-                  positionClass = hasNavFileParent ? "is-before" : "is-before-root";
-                } else {
-                  positionClass = "is-after";
-                }
+								// Determine a dot container class according to strategy
+								let positionClass: string;
+								if (isBefore) {
+									positionClass = hasNavFileParent
+										? "is-before"
+										: "is-before-root";
+								} else {
+									positionClass = "is-after";
+								}
 
 								dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
 
 								matchedColors.slice(0, 3).forEach((color, i) => {
 									const dot = createDiv();
-									dot.className = 'tag-dot';
-									dot.style.setProperty('--dot-color', color);
-									dot.style.setProperty('--dot-index', i.toString());
+									dot.className = "tag-dot";
+									dot.style.setProperty("--dot-color", color);
+									dot.style.setProperty("--dot-index", i.toString());
 									dotsContainer.appendChild(dot);
 								});
 								el.appendChild(dotsContainer);
@@ -203,7 +251,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	plugin: TagsColorFilesPlugin;
 	draggingIndex: number | null = null;
 	lastCreatedInput: HTMLInputElement | null = null;
-	ruleElements: { txt: HTMLInputElement, error: HTMLElement }[] = [];
+	ruleElements: { txt: HTMLInputElement; error: HTMLElement }[] = [];
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) {
 		super(app, plugin);
@@ -212,7 +260,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 	private validateTagName(tag: string): boolean {
 		if (!tag) return true;
-		const cleanTag = tag.replace(/^#/, '');
+		const cleanTag = tag.replace(/^#/, "");
 		if (!cleanTag) return true;
 		const validTagRegex = /^(?!\d+$)[\p{L}\p{N}/_-]+$/u;
 		return validTagRegex.test(cleanTag);
@@ -223,204 +271,246 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		this.ruleElements = [];
 
-		new Setting(containerEl)
-			.setName(t('SETTINGS_TITLE'))
-			.setHeading();
+		new Setting(containerEl).setName(t("SETTINGS_TITLE")).setHeading();
 
-		const descContainer = containerEl.createDiv({ cls: 'plugin-description-container' });
-		descContainer.createEl('p', { text: t('PLUGIN_DESCRIPTION'), cls: 'setting-item-description' });
+		const descContainer = containerEl.createDiv({
+			cls: "plugin-description-container",
+		});
+		descContainer.createEl("p", {
+			text: t("PLUGIN_DESCRIPTION"),
+			cls: "setting-item-description",
+		});
+
+		new Setting(containerEl).setName(t("GENERAL_SECTION")).setHeading();
 
 		new Setting(containerEl)
-			.setName(t('GENERAL_SECTION'))
-			.setHeading();
-
-		new Setting(containerEl)
-			.setName(t('COLOR_METHOD_NAME'))
-			.setDesc(t('COLOR_METHOD_DESC'))
+			.setName(t("COLOR_METHOD_NAME"))
+			.setDesc(t("COLOR_METHOD_DESC"))
 			.addDropdown((dropdown) => {
 				dropdown
-					.addOption('text', t('COLOR_TEXT'))
-					.addOption('background', t('COLOR_BG'))
-					.addOption('before-text', t('COLOR_DOTS_BEFORE'))
-					.addOption('after-text', t('COLOR_DOTS_AFTER'))
+					.addOption("text", t("COLOR_TEXT"))
+					.addOption("background", t("COLOR_BG"))
+					.addOption("before-text", t("COLOR_DOTS_BEFORE"))
+					.addOption("after-text", t("COLOR_DOTS_AFTER"))
 					// Added new options
-					.addOption('dots-before-text', t('COLOR_DOTS_BEFORE_TEXT'))
-					.addOption('dots-after-text', t('COLOR_DOTS_AFTER_TEXT'))
+					.addOption("dots-before-text", t("COLOR_DOTS_BEFORE_TEXT"))
+					.addOption("dots-after-text", t("COLOR_DOTS_AFTER_TEXT"))
 					.setValue(this.plugin.settings.colorStrategy)
-					.onChange(async (value: TagsColorFilesSettings['colorStrategy']) => {
-						this.plugin.settings.colorStrategy = value;
+					.onChange(async (value: string) => {
+						this.plugin.settings.colorStrategy =
+							value as TagsColorFilesSettings["colorStrategy"];
 						await this.plugin.saveSettings();
 						this.display();
 					});
 			});
 
 		// Check if current strategy is one of the dot strategies to show dot size settings
-		const strategiesWithDots = ['before-text', 'after-text', 'dots-before-text', 'dots-after-text'];
+		const strategiesWithDots = [
+			"before-text",
+			"after-text",
+			"dots-before-text",
+			"dots-after-text",
+		];
 		if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
 			new Setting(containerEl)
-				.setName(t('DOT_SIZE_NAME'))
-				.setDesc(t('DOT_SIZE_DESC'))
+				.setName(t("DOT_SIZE_NAME"))
+				.setDesc(t("DOT_SIZE_DESC"))
 				.addDropdown((dropdown) => {
 					dropdown
-						.addOption('small', t('DOT_SMALL'))
-						.addOption('default', t('DOT_DEFAULT'))
-						.addOption('big', t('DOT_BIG'))
+						.addOption("small", t("DOT_SMALL"))
+						.addOption("default", t("DOT_DEFAULT"))
+						.addOption("big", t("DOT_BIG"))
 						.setValue(this.plugin.settings.dotSize)
-						.onChange(async (value: TagsColorFilesSettings['dotSize']) => {
-							this.plugin.settings.dotSize = value;
+						.onChange(async (value: string) => {
+							this.plugin.settings.dotSize =
+								value as TagsColorFilesSettings["dotSize"];
 							await this.plugin.saveSettings();
 						});
 				});
 		}
 
 		// --- MODIFIED BACKUP SECTION ---
-		const backupSetting = new Setting(containerEl)
-			.setName(t('BACKUP_RESTORE'));
+		const backupSetting = new Setting(containerEl).setName(t("BACKUP_RESTORE"));
 
 		// Only show EXPORT button if NOT on mobile
 		if (!Platform.isMobile) {
-			backupSetting.addButton((btn) => btn.setButtonText(t('EXPORT')).onClick(() => {
-				const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
-				const blob = new Blob([data], { type: 'application/json' });
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = 'data.json';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-				new Notice(t('EXPORTED'));
-			}));
+			backupSetting.addButton((btn) =>
+				btn.setButtonText(t("EXPORT")).onClick(() => {
+					const data = JSON.stringify(this.plugin.settings.tagColors, null, 2);
+					const blob = new Blob([data], { type: "application/json" });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = "data.json";
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+					new Notice(t("EXPORTED"));
+				}),
+			);
 		}
 
 		// Import button remains for everyone
-		backupSetting.addButton((btn) => btn.setButtonText(t('IMPORT')).onClick(() => {
-			const input = createEl('input');
-			input.type = 'file'; input.accept = '.json';
-			input.onchange = (e: Event) => {
-				const target = e.target as HTMLInputElement;
-				const file = target.files?.[0];
-				if (!file) return;
-				const reader = new FileReader();
-				reader.onload = (event: ProgressEvent<FileReader>) => {
-					try {
-						const result = event.target?.result;
-						if (typeof result === 'string') {
-							const parsed: unknown = JSON.parse(result);
-							if (Array.isArray(parsed) && parsed.every((item): item is TagColorConfig =>
-							    typeof item === 'object' && item !== null && 'tag' in item && 'color' in item)) {
-							    this.plugin.settings.tagColors = parsed;
-								void this.plugin.saveSettings();
-								this.display();
-								new Notice(t('IMPORTED'));
+		backupSetting.addButton((btn) =>
+			btn.setButtonText(t("IMPORT")).onClick(() => {
+				const input = createEl("input");
+				input.type = "file";
+				input.accept = ".json";
+				input.onchange = (e: Event) => {
+					const target = e.target as HTMLInputElement;
+					const file = target.files?.[0];
+					if (!file) return;
+					const reader = new FileReader();
+					reader.onload = (event: ProgressEvent<FileReader>) => {
+						try {
+							const result = event.target?.result;
+							if (typeof result === "string") {
+								const parsed: unknown = JSON.parse(result);
+								if (
+									Array.isArray(parsed) &&
+									parsed.every(
+										(item): item is TagColorConfig =>
+											typeof item === "object" &&
+											item !== null &&
+											"tag" in item &&
+											"color" in item,
+									)
+								) {
+									this.plugin.settings.tagColors = parsed;
+									void this.plugin.saveSettings();
+									this.display();
+									new Notice(t("IMPORTED"));
+								}
 							}
+						} catch (_err) {
+							new Notice(t("INVALID_FILE"));
 						}
-					} catch (_err) { new Notice(t('INVALID_FILE')); }
+					};
+					reader.readAsText(file);
 				};
-				reader.readAsText(file);
-			};
-			input.click();
-		}));
+				input.click();
+			}),
+		);
 		// --------------------------------
 
-		containerEl.createEl('hr');
+		containerEl.createEl("hr");
+
+		new Setting(containerEl).setName(t("RULES_SECTION")).setHeading();
 
 		new Setting(containerEl)
-			.setName(t('RULES_SECTION'))
-			.setHeading();
-
-		new Setting(containerEl)
-			.setName(t('ADD_RULE_NAME'))
-			.setDesc(t('ADD_RULE_DESC'))
-			.addButton((btn) => btn
-				.setButtonText(t('ADD_RULE_BTN'))
-				.setCta()
-				.onClick(() => {
-					this.plugin.settings.tagColors.unshift({ tag: '', color: '#4a90e2' });
-					this.display();
-					if (this.lastCreatedInput) this.lastCreatedInput.focus();
-				})
+			.setName(t("ADD_RULE_NAME"))
+			.setDesc(t("ADD_RULE_DESC"))
+			.addButton((btn) =>
+				btn
+					.setButtonText(t("ADD_RULE_BTN"))
+					.setCta()
+					.onClick(() => {
+						this.plugin.settings.tagColors.unshift({
+							tag: "",
+							color: "#4a90e2",
+						});
+						this.display();
+						if (this.lastCreatedInput) this.lastCreatedInput.focus();
+					}),
 			);
 
-		const rulesContainer = containerEl.createDiv({ cls: 'tag-rules-list' });
+		const rulesContainer = containerEl.createDiv({ cls: "tag-rules-list" });
 
 		const validateAllTags = () => {
 			const tagCounts: { [key: string]: number } = {};
-			this.ruleElements.forEach(el => {
-				const val = el.txt.value.replace(/^#/, '').toLowerCase().trim();
+			this.ruleElements.forEach((el) => {
+				const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
 				if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
 			});
 
-			this.ruleElements.forEach(el => {
+			this.ruleElements.forEach((el) => {
 				const rawVal = el.txt.value.trim();
-				const normalizedVal = rawVal.replace(/^#/, '').toLowerCase();
+				const normalizedVal = rawVal.replace(/^#/, "").toLowerCase();
 				const isDuplicate = normalizedVal && tagCounts[normalizedVal] > 1;
 				const isValid = this.validateTagName(rawVal);
 
 				if (isDuplicate || !isValid) {
-					el.txt.addClass('is-invalid');
-					el.error.addClass('is-visible');
-					el.error.setText(!isValid ? t('INVALID_TAG_ERROR') : t('DUPLICATE_TAG_ERROR'));
+					el.txt.addClass("is-invalid");
+					el.error.addClass("is-visible");
+					el.error.setText(
+						!isValid ? t("INVALID_TAG_ERROR") : t("DUPLICATE_TAG_ERROR"),
+					);
 				} else {
-					el.txt.removeClass('is-invalid');
-					el.error.removeClass('is-visible');
+					el.txt.removeClass("is-invalid");
+					el.error.removeClass("is-visible");
 				}
 			});
 		};
 
 		this.plugin.settings.tagColors.forEach((config, index) => {
-			const div = rulesContainer.createDiv({ cls: 'tag-color-setting-item' });
+			const div = rulesContainer.createDiv({ cls: "tag-color-setting-item" });
 
 			if (Platform.isMobile) {
-				const reorderContainer = div.createDiv({ cls: 'tag-reorder-arrows' });
-				const upBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
-				setIcon(upBtn, 'arrow-up');
+				const reorderContainer = div.createDiv({ cls: "tag-reorder-arrows" });
+				const upBtn = reorderContainer.createEl("button", {
+					cls: "clickable-icon",
+				});
+				setIcon(upBtn, "arrow-up");
 				upBtn.onclick = () => {
 					if (index > 0) {
-						const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+						const movedItem = this.plugin.settings.tagColors.splice(
+							index,
+							1,
+						)[0];
 						this.plugin.settings.tagColors.splice(index - 1, 0, movedItem);
 						void this.plugin.saveSettings();
 						this.display();
 					}
 				};
 
-				const downBtn = reorderContainer.createEl('button', { cls: 'clickable-icon' });
-				setIcon(downBtn, 'arrow-down');
+				const downBtn = reorderContainer.createEl("button", {
+					cls: "clickable-icon",
+				});
+				setIcon(downBtn, "arrow-down");
 				downBtn.onclick = () => {
 					if (index < this.plugin.settings.tagColors.length - 1) {
-						const movedItem = this.plugin.settings.tagColors.splice(index, 1)[0];
+						const movedItem = this.plugin.settings.tagColors.splice(
+							index,
+							1,
+						)[0];
 						this.plugin.settings.tagColors.splice(index + 1, 0, movedItem);
 						void this.plugin.saveSettings();
 						this.display();
 					}
 				};
 			} else {
-				if (this.draggingIndex === index) div.addClass('is-dragging');
+				if (this.draggingIndex === index) div.addClass("is-dragging");
 				div.draggable = true;
-				const dragHandle = div.createDiv({ cls: 'clickable-icon drag-handle' });
-				setIcon(dragHandle, 'lucide-grip-vertical');
+				const dragHandle = div.createDiv({ cls: "clickable-icon drag-handle" });
+				setIcon(dragHandle, "lucide-grip-vertical");
 
-				div.addEventListener('dragstart', () => {
+				div.addEventListener("dragstart", () => {
 					validateAllTags();
-					if (!txt.classList.contains('is-invalid') && txt.value.trim() !== "") {
+					if (
+						!txt.classList.contains("is-invalid") &&
+						txt.value.trim() !== ""
+					) {
 						config.tag = txt.value;
 						void this.plugin.saveSettings();
 					}
 					this.draggingIndex = index;
-					div.addClass('is-dragging');
+					div.addClass("is-dragging");
 				});
 
-				div.addEventListener('dragend', () => {
+				div.addEventListener("dragend", () => {
 					this.draggingIndex = null;
-					div.removeClass('is-dragging');
+					div.removeClass("is-dragging");
 					this.display();
 				});
 
-				div.addEventListener('dragover', (e) => {
+				div.addEventListener("dragover", (e) => {
 					e.preventDefault();
 					if (this.draggingIndex !== null && this.draggingIndex !== index) {
-						const movedItem = this.plugin.settings.tagColors.splice(this.draggingIndex, 1)[0];
+						const movedItem = this.plugin.settings.tagColors.splice(
+							this.draggingIndex,
+							1,
+						)[0];
 						this.plugin.settings.tagColors.splice(index, 0, movedItem);
 						this.draggingIndex = index;
 						void this.plugin.saveSettings();
@@ -431,61 +521,77 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 			// Negative and positive tag highlights button
 
-			const notBtn = div.createEl('button', { cls: 'clickable-icon tag-not-btn' });
-			setIcon(notBtn, config.isNegative ? 'ban' : 'check');
+			const notBtn = div.createEl("button", {
+				cls: "clickable-icon tag-not-btn",
+			});
+			setIcon(notBtn, config.isNegative ? "ban" : "check");
 
-			setTooltip(notBtn, config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE'));
+			setTooltip(
+				notBtn,
+				config.isNegative ? t("RULE_MATCH_NEGATIVE") : t("RULE_MATCH_POSITIVE"),
+			);
 
 			notBtn.onclick = () => {
-			    config.isNegative = !config.isNegative;
-			    setIcon(notBtn, config.isNegative ? 'ban' : 'check');
+				config.isNegative = !config.isNegative;
+				setIcon(notBtn, config.isNegative ? "ban" : "check");
 
-			    setTooltip(notBtn, config.isNegative ? t('RULE_MATCH_NEGATIVE') : t('RULE_MATCH_POSITIVE'));
+				setTooltip(
+					notBtn,
+					config.isNegative
+						? t("RULE_MATCH_NEGATIVE")
+						: t("RULE_MATCH_POSITIVE"),
+				);
 
-			    void this.plugin.saveSettings();
+				void this.plugin.saveSettings();
 			};
 
-			const cp = createEl('input');
-			cp.type = 'color';
+			const cp = createEl("input");
+			cp.type = "color";
 			cp.value = config.color;
-			cp.addClass('tag-color-picker-input');
+			cp.addClass("tag-color-picker-input");
 			cp.onchange = (e: Event) => {
 				config.color = (e.target as HTMLInputElement).value;
 				void this.plugin.saveSettings();
 			};
 			div.appendChild(cp);
 
-			const inputContainer = div.createDiv({ cls: 'tag-input-container' });
-			const fieldWrapper = inputContainer.createDiv({ cls: 'tag-input-field-wrapper' });
+			const inputContainer = div.createDiv({ cls: "tag-input-container" });
+			const fieldWrapper = inputContainer.createDiv({
+				cls: "tag-input-field-wrapper",
+			});
 
-			const txt = createEl('input');
-			txt.type = 'text';
+			const txt = createEl("input");
+			txt.type = "text";
 			txt.value = config.tag;
-			txt.placeholder = t('TAG_PLACEHOLDER');
+			txt.placeholder = t("TAG_PLACEHOLDER");
 			if (index === 0) this.lastCreatedInput = txt;
 			fieldWrapper.appendChild(txt);
 
-			const errorMsg = inputContainer.createDiv({ cls: 'tag-error-message' });
+			const errorMsg = inputContainer.createDiv({ cls: "tag-error-message" });
 
 			this.ruleElements.push({ txt, error: errorMsg });
 			new TagSuggest(this.app, txt);
 
-			const debouncedSave = debounce(async () => {
-				if (txt.value.trim() !== "") {
-					config.tag = txt.value;
-					await this.plugin.saveSettings();
-				}
-			}, 400, true);
+			const debouncedSave = debounce(
+				async () => {
+					if (txt.value.trim() !== "") {
+						config.tag = txt.value;
+						await this.plugin.saveSettings();
+					}
+				},
+				400,
+				true,
+			);
 
 			txt.oninput = () => {
 				validateAllTags();
 				debouncedSave();
 			};
 
-			txt.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter') {
+			txt.addEventListener("keydown", (e: KeyboardEvent) => {
+				if (e.key === "Enter") {
 					validateAllTags();
-					if (!txt.classList.contains('is-invalid')) {
+					if (!txt.classList.contains("is-invalid")) {
 						config.tag = txt.value;
 						void this.plugin.saveSettings();
 						txt.blur();
@@ -499,16 +605,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				void this.plugin.saveSettings();
 			};
 
-			txt.addEventListener('blur', () => {
-				if (!txt.value || txt.value.trim() === '') {
+			txt.addEventListener("blur", () => {
+				if (!txt.value || txt.value.trim() === "") {
 					this.plugin.settings.tagColors.splice(index, 1);
 					void this.plugin.saveSettings();
 					this.display();
 				}
 			});
 
-			const del = div.createEl('button', { cls: 'clickable-icon' });
-			setIcon(del, 'trash');
+			const del = div.createEl("button", { cls: "clickable-icon" });
+			setIcon(del, "trash");
 			del.onclick = () => {
 				this.plugin.settings.tagColors.splice(index, 1);
 				void this.plugin.saveSettings();
