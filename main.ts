@@ -171,10 +171,9 @@ export default class TagsColorFilesPlugin extends Plugin {
 	removeFileColors() {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 		fileExplorers.forEach((leaf) => {
-			const containerEl = leaf.view.containerEl as HTMLElement;
-			const navFiles =
-				containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
-			for (const el of navFiles) this.cleanElement(el);
+			leaf.view.containerEl
+				.querySelectorAll<HTMLElement>(".nav-file-title")
+				.forEach((el) => this.cleanElement(el));
 		});
 	}
 
