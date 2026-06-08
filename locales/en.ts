@@ -30,5 +30,5 @@ export default {
 	INVALID_TAG_ERROR: "Invalid tag name",
 	OPERATOR_CONTAINS: "contains",
 	OPERATOR_NOT_CONTAINS: "does not contain",
-	FILTER_FOLDER_PLACEHOLDER: "All folders",
+	FILTER_FOLDER_PLACEHOLDER: "Start typing folder name…",
 };

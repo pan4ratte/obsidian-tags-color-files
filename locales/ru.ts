@@ -26,9 +26,9 @@ export default {
 	ADD_RULE_BTN: "Новое общее правило",
 	ADD_FOLDER_RULE_BTN: "Новое правило папки",
 	TAG_PLACEHOLDER: "Введите тег (регистр не учитывается)",
-	DUPLICATE_TAG_ERROR:"Для этого тега уже существует правило! Выберите другой тег",
+	DUPLICATE_TAG_ERROR:"Внимание: По крайней мере два конфликтующих правила созданы для одного тега! Выберите другой тег",
 	INVALID_TAG_ERROR: "Некорректное имя тега",
 	OPERATOR_CONTAINS: "содержит",
 	OPERATOR_NOT_CONTAINS: "не содержит",
-	FILTER_FOLDER_PLACEHOLDER: "Все папки",
+	FILTER_FOLDER_PLACEHOLDER: "Начните вводить название папки…",
 };
