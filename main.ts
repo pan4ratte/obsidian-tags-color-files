@@ -472,6 +472,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cls: "tag-input-field-wrapper",
 		});
 		fieldWrapper.appendChild(txt);
+		const errorMsg = fieldWrapper.createDiv({ cls: "tag-error-message" });
 		new TagSuggest(this.app, txt);
 
 		// ── Folder input (folder rules only) ──────────────────────────────────
@@ -498,8 +499,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				void this.plugin.saveSettings();
 			};
 		}
-
-		const errorMsg = inputContainer.createDiv({ cls: "tag-error-message" });
 		this.ruleElements.push({ txt, error: errorMsg, groupIdx });
 
 		const debouncedSave = debounce(

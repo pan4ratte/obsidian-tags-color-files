@@ -85,6 +85,7 @@
 .tag-rules-list .tag-color-setting-item {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
     border: 1px solid var(--setting-items-border-color);
     border-radius: var(--setting-items-radius);
@@ -95,12 +96,15 @@
 .tag-input-container {
     display: flex;
     flex-direction: row;
-    flex: 1;
+    flex-wrap: wrap;
+    flex: 1 1 180px;
+    min-width: 180px;
     gap: 12px;
 }
 
 .tag-input-field-wrapper {
-    width: 100%;
+    flex: 1 1 180px;
+    min-width: 0;
 }
 
 .tag-color-setting-item .tag-color-picker-input {
@@ -140,16 +144,15 @@
 
 .tag-error-message {
     color: var(--text-error);
-    font-size: 0.75em;
+    font-size: var(--font-smallest);
     display: none;
-    line-height: 1.2;
-    margin-top: 8px;
+    margin-top: 4px;
     margin-left: 8px;
-    margin-bottom: -21.5px;
 }
 
 .tag-error-message.is-visible {
     display: block;
+    white-space: nowrap;
 }
 
 .drag-handle {
@@ -225,5 +228,6 @@
 }
 
 .tag-folder-scope-input {
-    width: 100%;
+    flex: 1 1 180px;
+    min-width: 0;
 }
