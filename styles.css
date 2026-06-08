@@ -136,6 +136,7 @@
 
 .tag-rules-list .tag-color-setting-item input[type="text"] {
     width: 100%;
+    min-width: 180px;
 }
 
 .tag-rules-list .tag-color-setting-item input[type="text"].is-invalid {
