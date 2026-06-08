@@ -278,7 +278,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	draggingGroupIdx: number | null = null;
 	draggingRuleIdx: number | null = null;
 	focusPending: number | null = null;
-	ruleElements: { txt: HTMLInputElement; groupIdx: number }[] = [];
+	ruleElements: { txt: HTMLInputElement; folderInput: HTMLInputElement | null; groupIdx: number }[] = [];
 	errorBanner: HTMLElement | null = null;
 
 
@@ -301,14 +301,16 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		);
 		const tagCounts: { [key: string]: number } = {};
 		for (const el of groupRuleEls) {
-			const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
-			if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
+			const tag = el.txt.value.replace(/^#/, "").toLowerCase().trim();
+			const scope = (el.folderInput?.value ?? "").trim().toLowerCase();
+			if (tag) tagCounts[`${tag}::${scope}`] = (tagCounts[`${tag}::${scope}`] || 0) + 1;
 		}
 		let firstError: string | null = null;
 		for (const el of groupRuleEls) {
 			const rawVal = el.txt.value.trim();
 			const normalizedVal = rawVal.replace(/^#/, "").toLowerCase();
-			const isDuplicate = normalizedVal && tagCounts[normalizedVal] > 1;
+			const scope = (el.folderInput?.value ?? "").trim().toLowerCase();
+			const isDuplicate = normalizedVal && tagCounts[`${normalizedVal}::${scope}`] > 1;
 			const isValid = this.validateTagName(rawVal);
 			if (isDuplicate || !isValid) {
 				el.txt.addClass("is-invalid");
@@ -481,25 +483,31 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 
 		// ── Folder input (folder rules only) ──────────────────────────────────
 		// Lives inside inputContainer so it inherits the same flex width as txt.
+		let folderInput: HTMLInputElement | null = null;
 		if (config.folderScope !== undefined) {
-			const folderInput = inputContainer.createEl("input");
-			folderInput.type = "text";
-			folderInput.value = config.folderScope ?? "";
-			folderInput.placeholder = t("FILTER_FOLDER_PLACEHOLDER");
-			folderInput.addClass("tag-folder-scope-input");
-			new FolderSuggest(this.app, folderInput);
+			folderInput = inputContainer.createEl("input");
+			const fi = folderInput;
+			fi.type = "text";
+			fi.value = config.folderScope ?? "";
+			fi.placeholder = t("FILTER_FOLDER_PLACEHOLDER");
+			fi.addClass("tag-folder-scope-input");
+			new FolderSuggest(this.app, fi);
 
 			const debouncedFolderSave = debounce(
 				async () => {
-					config.folderScope = folderInput.value.trim();
+					config.folderScope = fi.value.trim();
 					await this.plugin.saveSettings();
 				},
 				400,
 				true,
 			);
-			folderInput.oninput = () => { debouncedFolderSave(); };
-			folderInput.onchange = (e: Event) => {
+			fi.oninput = () => {
+				this.validateGroupTags(groupIdx);
+				debouncedFolderSave();
+			};
+			fi.onchange = (e: Event) => {
 				config.folderScope = (e.target as HTMLInputElement).value.trim();
+				this.validateGroupTags(groupIdx);
 				void this.plugin.saveSettings();
 			};
 		}
@@ -554,7 +562,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.display();
 		};
 
-		this.ruleElements.push({ txt, groupIdx });
+		this.ruleElements.push({ txt, folderInput, groupIdx });
 	}
 
 	display(): void {
