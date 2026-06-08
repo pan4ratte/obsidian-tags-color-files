@@ -26,7 +26,7 @@ export default {
 	ADD_RULE_BTN: "Add general rule",
 	ADD_FOLDER_RULE_BTN: "Add folder rule",
 	TAG_PLACEHOLDER: "Enter a tag (case-insensitive)",
-	DUPLICATE_TAG_ERROR:"There is already a rule for this tag! Choose another tag.",
+	DUPLICATE_TAG_ERROR:"Warning: at least two conflicting rules created for one tag! Choose another tag.",
 	INVALID_TAG_ERROR: "Invalid tag name",
 	OPERATOR_CONTAINS: "contains",
 	OPERATOR_NOT_CONTAINS: "does not contain",

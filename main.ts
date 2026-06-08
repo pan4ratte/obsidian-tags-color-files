@@ -278,8 +278,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	draggingGroupIdx: number | null = null;
 	draggingRuleIdx: number | null = null;
 	focusPending: number | null = null;
-	ruleElements: { txt: HTMLInputElement; error: HTMLElement; groupIdx: number }[] =
-		[];
+	ruleElements: { txt: HTMLInputElement; groupIdx: number }[] = [];
+	errorBanner: HTMLElement | null = null;
 
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) {
@@ -304,6 +304,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			const val = el.txt.value.replace(/^#/, "").toLowerCase().trim();
 			if (val) tagCounts[val] = (tagCounts[val] || 0) + 1;
 		}
+		let firstError: string | null = null;
 		for (const el of groupRuleEls) {
 			const rawVal = el.txt.value.trim();
 			const normalizedVal = rawVal.replace(/^#/, "").toLowerCase();
@@ -311,13 +312,17 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			const isValid = this.validateTagName(rawVal);
 			if (isDuplicate || !isValid) {
 				el.txt.addClass("is-invalid");
-				el.error.addClass("is-visible");
-				el.error.setText(
-					!isValid ? t("INVALID_TAG_ERROR") : t("DUPLICATE_TAG_ERROR"),
-				);
+				firstError ??= !isValid ? t("INVALID_TAG_ERROR") : t("DUPLICATE_TAG_ERROR");
 			} else {
 				el.txt.removeClass("is-invalid");
-				el.error.removeClass("is-visible");
+			}
+		}
+		if (this.errorBanner) {
+			if (firstError !== null) {
+				this.errorBanner.setText(firstError);
+				this.errorBanner.addClass("is-visible");
+			} else {
+				this.errorBanner.removeClass("is-visible");
 			}
 		}
 	}
@@ -472,7 +477,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cls: "tag-input-field-wrapper",
 		});
 		fieldWrapper.appendChild(txt);
-		const errorMsg = fieldWrapper.createDiv({ cls: "tag-error-message" });
 		new TagSuggest(this.app, txt);
 
 		// ── Folder input (folder rules only) ──────────────────────────────────
@@ -499,7 +503,6 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				void this.plugin.saveSettings();
 			};
 		}
-		this.ruleElements.push({ txt, error: errorMsg, groupIdx });
 
 		const debouncedSave = debounce(
 			async () => {
@@ -551,6 +554,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			this.display();
 		};
 
+		this.ruleElements.push({ txt, groupIdx });
 	}
 
 	display(): void {
@@ -716,6 +720,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			);
+
+		this.errorBanner = containerEl.createDiv({ cls: "tag-error-message" });
 
 		const generalRulesContainer = containerEl.createDiv({
 			cls: "tag-rules-list",

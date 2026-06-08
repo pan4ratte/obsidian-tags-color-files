@@ -78,7 +78,7 @@
 .tag-rules-list {
     display: flex;
     flex-direction: column;
-    margin-top: 16px;
+    margin-top: 8px;
     gap: 8px;
 }
 
@@ -145,14 +145,12 @@
 .tag-error-message {
     color: var(--text-error);
     font-size: var(--font-smallest);
-    display: none;
-    margin-top: 4px;
-    margin-left: 8px;
+    visibility: hidden;
+    padding: 4px 16px 0;
 }
 
 .tag-error-message.is-visible {
-    display: block;
-    white-space: nowrap;
+    visibility: visible;
 }
 
 .drag-handle {
@@ -199,7 +197,7 @@
     white-space: nowrap;
     border-style: solid;
     border-color: var(--background-modifier-border);
-    border-radius: var(--radius-s);
+    border-radius: var(--input-radius);
 }
 
 .tag-color-setting-item .combobox-button.filter-operator:hover {
