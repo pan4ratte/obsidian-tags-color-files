@@ -142,7 +142,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 				childList: true,
 				subtree: true,
 			});
-			activeWindow.setTimeout(() => this.updateFileColors(), 500);
+			window.setTimeout(() => this.updateFileColors(), 500);
 		});
 	}
 
@@ -171,8 +171,9 @@ export default class TagsColorFilesPlugin extends Plugin {
 	removeFileColors() {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 		fileExplorers.forEach((leaf) => {
+			const containerEl = leaf.view.containerEl as HTMLElement;
 			const navFiles =
-				leaf.view.containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
+				containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
 			for (const el of navFiles) this.cleanElement(el);
 		});
 	}
@@ -639,12 +640,12 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					);
 					const blob = new Blob([data], { type: "application/json" });
 					const url = URL.createObjectURL(blob);
-					const a = document.createElement("a");
+					const a = activeDocument.createElement("a");
 					a.href = url;
 					a.download = "data.json";
-					document.body.appendChild(a);
+					activeDocument.body.appendChild(a);
 					a.click();
-					document.body.removeChild(a);
+					activeDocument.body.removeChild(a);
 					URL.revokeObjectURL(url);
 					new Notice(t("EXPORTED"));
 				}),
@@ -670,7 +671,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 									typeof parsed === "object" &&
 									parsed !== null &&
 									!Array.isArray(parsed) &&
-									"generalRules" in (parsed as object)
+									"generalRules" in parsed
 								) {
 									const obj = parsed as { generalRules?: TagColorConfig[] };
 									this.plugin.settings.generalRules = Array.isArray(obj.generalRules)
@@ -683,7 +684,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 								}
 								new Notice(t("INVALID_FILE"));
 							}
-						} catch (_err) {
+						} catch {
 							new Notice(t("INVALID_FILE"));
 						}
 					};
