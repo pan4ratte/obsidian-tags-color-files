@@ -143,6 +143,87 @@
     border: 1px solid var(--text-error);
 }
 
+.auto-tag-colors-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+    margin-bottom: 24px;
+    gap: 8px;
+}
+
+.auto-tag-color-setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--setting-items-border-color);
+    border-radius: var(--setting-items-radius);
+    padding: 12px 16px;
+    background-color: var(--setting-items-background);
+}
+
+.auto-tag-color-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-monospace);
+}
+
+.auto-tag-color-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+.auto-tag-color-controls .tag-color-picker-input {
+    appearance: none;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    flex: 0 0 24px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.auto-tag-color-controls .tag-color-picker-input:disabled,
+.auto-tag-color-controls .auto-tag-color-hex-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.auto-tag-color-controls .tag-color-picker-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 50%;
+}
+
+.auto-tag-color-controls .tag-color-picker-input::-webkit-color-swatch {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
+}
+
+.auto-tag-color-hex-input {
+    width: 92px;
+    min-width: 92px;
+}
+
+.auto-tag-color-hex-input.is-invalid {
+    border: 1px solid var(--text-error);
+}
+
+.auto-tag-colors-empty {
+    padding: 4px 16px;
+}
+
 .tag-error-message {
     color: var(--text-error);
     font-size: var(--font-smallest);

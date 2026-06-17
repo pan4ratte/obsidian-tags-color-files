@@ -84,6 +84,9 @@ interface TagColorConfig {
 
 interface TagsColorFilesSettings {
 	generalRules: TagColorConfig[];
+	autoTagsEnabled: boolean;
+	autoTagColors: Record<string, string>;
+	autoTagHierarchyLightenScaling: number;
 	colorStrategy:
 		| "text"
 		| "background"
@@ -96,9 +99,96 @@ interface TagsColorFilesSettings {
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	generalRules: [],
+	autoTagsEnabled: false,
+	autoTagColors: {},
+	autoTagHierarchyLightenScaling: 0.2,
 	colorStrategy: "text",
 	dotSize: "default",
 };
+
+const HEX_COLOR_REGEX = /^#[0-9a-f]{6}$/i;
+
+function normalizeTag(tag: string): string {
+	return tag.replace(/^#/, "").toLowerCase();
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value));
+}
+
+function hashString(value: string): number {
+	let hash = 0;
+	for (let i = 0; i < value.length; i++) {
+		hash = (hash << 5) - hash + value.charCodeAt(i);
+		hash |= 0;
+	}
+	return Math.abs(hash);
+}
+
+function toTwoDigitHex(value: number): string {
+	const hex = Math.round(value).toString(16);
+	return hex.length === 1 ? `0${hex}` : hex;
+}
+
+function hslToHex(hue: number, saturation: number, lightness: number): string {
+	const s = saturation / 100;
+	const l = lightness / 100;
+	const c = (1 - Math.abs(2 * l - 1)) * s;
+	const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+	const m = l - c / 2;
+	let r = 0;
+	let g = 0;
+	let b = 0;
+
+	if (hue < 60) {
+		r = c;
+		g = x;
+	} else if (hue < 120) {
+		r = x;
+		g = c;
+	} else if (hue < 180) {
+		g = c;
+		b = x;
+	} else if (hue < 240) {
+		g = x;
+		b = c;
+	} else if (hue < 300) {
+		r = x;
+		b = c;
+	} else {
+		r = c;
+		b = x;
+	}
+
+	return `#${toTwoDigitHex((r + m) * 255)}${toTwoDigitHex(
+		(g + m) * 255,
+	)}${toTwoDigitHex((b + m) * 255)}`;
+}
+
+function getGeneratedTagColor(tag: string, lightenScaling: number): string {
+	const normalizedTag = normalizeTag(tag);
+	const rootTag = normalizedTag.split("/")[0];
+	const depth = normalizedTag.split("/").length - 1;
+	const rootHash = hashString(rootTag);
+	const hue = rootHash % 360;
+	const saturation = 62 + (rootHash % 16);
+	const rootColor = hslToHex(hue, saturation, 46);
+
+	return depth > 0
+		? lightenHexColor(rootColor, clamp(lightenScaling * depth, 0, 1))
+		: rootColor;
+}
+
+function lightenHexColor(color: string, amount: number): string {
+	const normalizedColor = color.replace(/^#/, "");
+	const channels = [0, 2, 4].map((start) =>
+		parseInt(normalizedColor.slice(start, start + 2), 16),
+	);
+	const toHex = (channel: number) =>
+		toTwoDigitHex(channel + (255 - channel) * amount);
+
+	return `#${channels.map(toHex).join("")}`;
+}
 
 export default class TagsColorFilesPlugin extends Plugin {
 	settings!: TagsColorFilesSettings;
@@ -158,14 +248,92 @@ export default class TagsColorFilesPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			raw as Partial<TagsColorFilesSettings>,
 		);
+		this.settings.autoTagColors = this.sanitizeAutoTagColors(
+			this.settings.autoTagColors,
+		);
+		this.settings.autoTagHierarchyLightenScaling =
+			this.sanitizeAutoTagHierarchyLightenScaling(
+				this.settings.autoTagHierarchyLightenScaling,
+			);
 	}
 
 	async saveSettings() {
 		this.settings.generalRules = this.settings.generalRules.filter(
 			(r) => r.tag && r.tag.trim() !== "",
 		);
+		this.settings.autoTagColors = this.sanitizeAutoTagColors(
+			this.settings.autoTagColors,
+		);
+		this.settings.autoTagHierarchyLightenScaling =
+			this.sanitizeAutoTagHierarchyLightenScaling(
+				this.settings.autoTagHierarchyLightenScaling,
+			);
 		await this.saveData(this.settings);
 		this.updateFileColors();
+	}
+
+	sanitizeAutoTagHierarchyLightenScaling(value: unknown): number {
+		const numericValue =
+			typeof value === "number" ? value : Number.parseFloat(String(value));
+		if (!Number.isFinite(numericValue)) {
+			return DEFAULT_SETTINGS.autoTagHierarchyLightenScaling;
+		}
+		return clamp(numericValue, 0, 1);
+	}
+
+	private sanitizeAutoTagColors(colors: unknown): Record<string, string> {
+		if (!colors || typeof colors !== "object" || Array.isArray(colors)) {
+			return {};
+		}
+
+		const sanitized: Record<string, string> = {};
+		for (const tag of Object.keys(colors)) {
+			const color = (colors as Record<string, unknown>)[tag];
+			if (typeof color !== "string" || !HEX_COLOR_REGEX.test(color)) continue;
+			const normalizedTag = normalizeTag(tag).trim();
+			if (!normalizedTag) continue;
+			sanitized[normalizedTag] = color.toLowerCase();
+		}
+		return sanitized;
+	}
+
+	getAllVaultTags(): string[] {
+		const cache = this.app.metadataCache as MetadataCache & {
+			getTags(): Record<string, number>;
+		};
+		return Object.keys(cache.getTags())
+			.map((tag) => normalizeTag(tag).trim())
+			.filter(Boolean)
+			.sort((a, b) => a.localeCompare(b));
+	}
+
+	getAutoTagColor(tag: string): string {
+		const normalizedTag = normalizeTag(tag).trim();
+		if (!normalizedTag) return "#4a90e2";
+		const configuredColor = this.settings.autoTagColors[normalizedTag];
+		if (configuredColor) return configuredColor;
+
+		const tagParts = normalizedTag.split("/");
+		for (let depth = tagParts.length - 1; depth > 0; depth--) {
+			const parentTag = tagParts.slice(0, depth).join("/");
+			const parentColor = this.settings.autoTagColors[parentTag];
+			if (parentColor) {
+				return lightenHexColor(
+					parentColor,
+					clamp(
+						this.settings.autoTagHierarchyLightenScaling *
+							(tagParts.length - depth),
+						0,
+						1,
+					),
+				);
+			}
+		}
+
+		return getGeneratedTagColor(
+			normalizedTag,
+			this.settings.autoTagHierarchyLightenScaling,
+		);
 	}
 
 	removeFileColors() {
@@ -197,13 +365,25 @@ export default class TagsColorFilesPlugin extends Plugin {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 
 		// Pre-normalize rules once per cycle
-		const normalizedRules = this.settings.generalRules
+		const normalizedManualRules = this.settings.generalRules
 			.filter((c) => c.tag)
 			.map((c) => ({
 				...c,
-				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
+				_normalized: normalizeTag(c.tag),
 				_folderScope: (c.folderScope ?? "").trim(),
 			}));
+
+		const normalizedAutoRules = this.settings.autoTagsEnabled
+			? this.getAllVaultTags().map((tag) => ({
+					tag,
+					color: this.getAutoTagColor(tag),
+					isNegative: false,
+					_normalized: tag,
+					_folderScope: "",
+				}))
+			: [];
+
+		const normalizedRules = [...normalizedManualRules, ...normalizedAutoRules];
 
 		fileExplorers.forEach((leaf) => {
 			const navFiles =
@@ -228,8 +408,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 						if (!inScope) continue;
 					}
 					const hasTag = fileTags.some(
-						(tag) =>
-							tag.replace(/^#/, "").toLowerCase() === rule._normalized,
+						(tag) => normalizeTag(tag) === rule._normalized,
 					);
 					if (rule.isNegative ? !hasTag : hasTag) {
 						matchedColors.push(rule.color);
@@ -565,6 +744,64 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		this.ruleElements.push({ txt, folderInput, groupIdx });
 	}
 
+	private renderAutoTagRow(
+		container: HTMLDivElement,
+		tag: string,
+		isEnabled: boolean,
+	) {
+		const normalizedTag = normalizeTag(tag);
+		const currentColor = this.plugin.getAutoTagColor(normalizedTag);
+		const div = container.createDiv({ cls: "auto-tag-color-setting-item" });
+
+		div.createDiv({
+			cls: "auto-tag-color-name",
+			text: `#${normalizedTag}`,
+		});
+
+		const controls = div.createDiv({ cls: "auto-tag-color-controls" });
+		const cp = controls.createEl("input");
+		cp.type = "color";
+		cp.value = currentColor;
+		cp.disabled = !isEnabled;
+		cp.addClass("tag-color-picker-input");
+
+		const hexInput = controls.createEl("input");
+		hexInput.type = "text";
+		hexInput.value = currentColor;
+		hexInput.placeholder = "#000000";
+		hexInput.disabled = !isEnabled;
+		hexInput.addClass("auto-tag-color-hex-input");
+
+		const saveColor = (color: string) => {
+			if (!HEX_COLOR_REGEX.test(color)) {
+				hexInput.addClass("is-invalid");
+				return;
+			}
+			const normalizedColor = color.toLowerCase();
+			hexInput.removeClass("is-invalid");
+			cp.value = normalizedColor;
+			hexInput.value = normalizedColor;
+			this.plugin.settings.autoTagColors[normalizedTag] = normalizedColor;
+			void this.plugin.saveSettings();
+		};
+
+		cp.oninput = (e: Event) => {
+			const color = (e.target as HTMLInputElement).value;
+			hexInput.value = color;
+		};
+		cp.onchange = (e: Event) => saveColor((e.target as HTMLInputElement).value);
+		hexInput.oninput = (e: Event) => {
+			const color = (e.target as HTMLInputElement).value.trim();
+			if (HEX_COLOR_REGEX.test(color)) {
+				saveColor(color);
+			} else {
+				hexInput.addClass("is-invalid");
+			}
+		};
+		hexInput.onchange = (e: Event) =>
+			saveColor((e.target as HTMLInputElement).value.trim());
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -692,6 +929,67 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				input.click();
 			}),
 		);
+
+		// ════════════════════════════════════
+		// Auto tags coloring section
+		// ════════════════════════════════════
+		new Setting(containerEl)
+			.setName(t("AUTO_TAGS_COLORING_SECTION"))
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName(t("AUTO_TAGS_ENABLE"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoTagsEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.autoTagsEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("AUTO_TAGS_HIERARCHY_LIGHTEN_SCALING"))
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = "0";
+				text.inputEl.max = "1";
+				text.inputEl.step = "0.01";
+				text.inputEl.disabled = !this.plugin.settings.autoTagsEnabled;
+				text.setValue(
+					this.plugin.settings.autoTagHierarchyLightenScaling.toString(),
+				);
+				text.inputEl.onchange = async (e: Event) => {
+					const value = (e.target as HTMLInputElement).value;
+					const scaling =
+						this.plugin.sanitizeAutoTagHierarchyLightenScaling(value);
+					this.plugin.settings.autoTagHierarchyLightenScaling = scaling;
+					text.setValue(scaling.toString());
+					await this.plugin.saveSettings();
+					this.display();
+				};
+			});
+
+		const autoTagsContainer = containerEl.createDiv({
+			cls: "auto-tag-colors-list",
+		});
+		const allTags = this.plugin.getAllVaultTags();
+
+		if (allTags.length === 0) {
+			autoTagsContainer.createDiv({
+				cls: "setting-item-description auto-tag-colors-empty",
+				text: t("AUTO_TAGS_EMPTY"),
+			});
+		} else {
+			allTags.forEach((tag) =>
+				this.renderAutoTagRow(
+					autoTagsContainer,
+					tag,
+					this.plugin.settings.autoTagsEnabled,
+				),
+			);
+		}
 
 		// ════════════════════════════════════
 		// Coloring rules section
