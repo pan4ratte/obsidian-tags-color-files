@@ -85,6 +85,7 @@ interface TagColorConfig {
 interface TagsColorFilesSettings {
 	generalRules: TagColorConfig[];
 	autoTagsEnabled: boolean;
+	autoTagsSeed: number;
 	autoTagColors: Record<string, string>;
 	autoTagHierarchyLightenScaling: number;
 	autoTagsGradientMultipleTags: boolean;
@@ -101,6 +102,7 @@ interface TagsColorFilesSettings {
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	generalRules: [],
 	autoTagsEnabled: false,
+	autoTagsSeed: 0,
 	autoTagColors: {},
 	autoTagHierarchyLightenScaling: 0.2,
 	autoTagsGradientMultipleTags: false,
@@ -167,11 +169,15 @@ function hslToHex(hue: number, saturation: number, lightness: number): string {
 	)}${toTwoDigitHex((b + m) * 255)}`;
 }
 
-function getGeneratedTagColor(tag: string, lightenScaling: number): string {
+function getGeneratedTagColor(
+	tag: string,
+	lightenScaling: number,
+	seed: number,
+): string {
 	const normalizedTag = normalizeTag(tag);
 	const rootTag = normalizedTag.split("/")[0];
 	const depth = normalizedTag.split("/").length - 1;
-	const rootHash = hashString(rootTag);
+	const rootHash = hashString(`${seed}:${rootTag}`);
 	const hue = rootHash % 360;
 	const saturation = 62 + (rootHash % 16);
 	const rootColor = hslToHex(hue, saturation, 46);
@@ -256,6 +262,9 @@ export default class TagsColorFilesPlugin extends Plugin {
 		this.settings.autoTagColors = this.sanitizeAutoTagColors(
 			this.settings.autoTagColors,
 		);
+		this.settings.autoTagsSeed = this.sanitizeAutoTagsSeed(
+			this.settings.autoTagsSeed,
+		);
 		this.settings.autoTagHierarchyLightenScaling =
 			this.sanitizeAutoTagHierarchyLightenScaling(
 				this.settings.autoTagHierarchyLightenScaling,
@@ -269,12 +278,24 @@ export default class TagsColorFilesPlugin extends Plugin {
 		this.settings.autoTagColors = this.sanitizeAutoTagColors(
 			this.settings.autoTagColors,
 		);
+		this.settings.autoTagsSeed = this.sanitizeAutoTagsSeed(
+			this.settings.autoTagsSeed,
+		);
 		this.settings.autoTagHierarchyLightenScaling =
 			this.sanitizeAutoTagHierarchyLightenScaling(
 				this.settings.autoTagHierarchyLightenScaling,
 			);
 		await this.saveData(this.settings);
 		this.updateFileColors();
+	}
+
+	sanitizeAutoTagsSeed(value: unknown): number {
+		const numericValue =
+			typeof value === "number" ? value : Number.parseInt(String(value), 10);
+		if (!Number.isFinite(numericValue)) {
+			return DEFAULT_SETTINGS.autoTagsSeed;
+		}
+		return Math.trunc(numericValue);
 	}
 
 	sanitizeAutoTagHierarchyLightenScaling(value: unknown): number {
@@ -338,6 +359,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 		return getGeneratedTagColor(
 			normalizedTag,
 			this.settings.autoTagHierarchyLightenScaling,
+			this.settings.autoTagsSeed,
 		);
 	}
 
@@ -1074,6 +1096,35 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName(t("AUTO_TAGS_SEED"))
+			.addButton((button) =>
+				button
+					.setButtonText(t("AUTO_TAGS_RANDOMIZE_SEED"))
+					.setDisabled(!this.plugin.settings.autoTagsEnabled)
+					.onClick(async () => {
+						this.plugin.settings.autoTagsSeed = Math.floor(
+							Math.random() * 2147483647,
+						);
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.step = "1";
+				text.inputEl.disabled = !this.plugin.settings.autoTagsEnabled;
+				text.setValue(this.plugin.settings.autoTagsSeed.toString());
+				text.inputEl.onchange = async (e: Event) => {
+					const value = (e.target as HTMLInputElement).value;
+					const seed = this.plugin.sanitizeAutoTagsSeed(value);
+					this.plugin.settings.autoTagsSeed = seed;
+					text.setValue(seed.toString());
+					await this.plugin.saveSettings();
+					this.display();
+				};
+			});
 
 		new Setting(containerEl)
 			.setName(t("AUTO_TAGS_GRADIENT_MULTIPLE_TAGS"))
