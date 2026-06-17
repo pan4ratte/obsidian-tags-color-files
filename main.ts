@@ -218,7 +218,10 @@ export default class TagsColorFilesPlugin extends Plugin {
 					if (
 						node.nodeType === Node.ELEMENT_NODE &&
 						((node as HTMLElement).classList.contains("nav-file") ||
-							(node as HTMLElement).querySelector(".nav-file-title"))
+							(node as HTMLElement).classList.contains("nav-folder") ||
+							(node as HTMLElement).querySelector(
+								".nav-file-title, .nav-folder-title",
+							))
 					) {
 						shouldUpdate = true;
 						break;
@@ -342,9 +345,46 @@ export default class TagsColorFilesPlugin extends Plugin {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 		fileExplorers.forEach((leaf) => {
 			leaf.view.containerEl
-				.querySelectorAll<HTMLElement>(".nav-file-title")
+				.querySelectorAll<HTMLElement>(".nav-file-title, .nav-folder-title")
 				.forEach((el) => this.cleanElement(el));
 		});
+	}
+
+	private getFolderNote(folderPath: string): TFile | null {
+		if (!folderPath) return null;
+		const folderName = folderPath.split("/").pop();
+		if (!folderName) return null;
+
+		const candidatePaths = [
+			`${folderPath}/${folderName}.md`,
+			`${folderPath}.md`,
+			`${folderPath}/index.md`,
+		];
+
+		for (const candidatePath of candidatePaths) {
+			const file = this.app.vault.getAbstractFileByPath(candidatePath);
+			if (file instanceof TFile && file.extension === "md") {
+				return file;
+			}
+		}
+
+		return null;
+	}
+
+	private getExplorerTitleFile(el: HTMLElement): TFile | null {
+		const path = el.getAttribute("data-path");
+		if (!path) return null;
+
+		const abstractFile = this.app.vault.getAbstractFileByPath(path);
+		if (abstractFile instanceof TFile && abstractFile.extension === "md") {
+			return abstractFile;
+		}
+
+		if (el.classList.contains("nav-folder-title")) {
+			return this.getFolderNote(path);
+		}
+
+		return null;
 	}
 
 	private cleanElement(el: HTMLElement) {
@@ -362,7 +402,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 		el.style.removeProperty("--tag-file-color");
 		el.style.removeProperty("--tag-file-gradient");
 		const titleContentEls = el.querySelectorAll<HTMLElement>(
-			".nav-file-title-content, .tree-item-inner",
+			".nav-file-title-content, .nav-folder-title-content, .tree-item-inner",
 		);
 		titleContentEls.forEach((titleContent) => {
 			titleContent.style.removeProperty("display");
@@ -405,16 +445,15 @@ export default class TagsColorFilesPlugin extends Plugin {
 		const normalizedRules = [...normalizedManualRules, ...normalizedAutoRules];
 
 		fileExplorers.forEach((leaf) => {
-			const navFiles =
-				leaf.view.containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
-			navFiles.forEach((el) => {
-				const path = el.getAttribute("data-path");
-				if (!path) return;
-				const file = this.app.vault.getAbstractFileByPath(path);
-				if (!(file instanceof TFile) || file.extension !== "md") return;
+			const navTitles = leaf.view.containerEl.querySelectorAll<HTMLElement>(
+				".nav-file-title, .nav-folder-title",
+			);
+			navTitles.forEach((el) => {
+				this.cleanElement(el);
+				const file = this.getExplorerTitleFile(el);
+				if (!file) return;
 				const cache = this.app.metadataCache.getFileCache(file);
 				const fileTags = cache ? (getAllTags(cache) ?? []) : [];
-				this.cleanElement(el);
 				const fileFolder = file.parent?.path ?? "";
 				const matchedColors: string[] = [];
 				const autoGradientColors: string[] = [];
@@ -452,6 +491,14 @@ export default class TagsColorFilesPlugin extends Plugin {
 					el.classList.add("colored-tag-file");
 					el.classList.add(`strategy-${this.settings.colorStrategy}`);
 					el.style.setProperty("--tag-file-color", matchedColors[0]);
+					const textColorStrategies = [
+						"text",
+						"dots-before-text",
+						"dots-after-text",
+					];
+					const usesTextColor = textColorStrategies.includes(
+						this.settings.colorStrategy,
+					);
 					if (
 						this.settings.autoTagsGradientMultipleTags &&
 						autoGradientColors.length > 1
@@ -467,7 +514,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 						];
 						if (gradientTextStrategies.includes(this.settings.colorStrategy)) {
 							const titleContentEls = el.querySelectorAll<HTMLElement>(
-								".nav-file-title-content, .tree-item-inner",
+								".nav-file-title-content, .nav-folder-title-content, .tree-item-inner",
 							);
 							titleContentEls.forEach((titleContent) => {
 								titleContent.style.setProperty("display", "inline-block");
@@ -490,6 +537,13 @@ export default class TagsColorFilesPlugin extends Plugin {
 								);
 							});
 						}
+					} else if (usesTextColor) {
+						const titleContentEls = el.querySelectorAll<HTMLElement>(
+							".nav-file-title-content, .nav-folder-title-content, .tree-item-inner",
+						);
+						titleContentEls.forEach((titleContent) => {
+							titleContent.style.setProperty("color", matchedColors[0]);
+						});
 					}
 
 					const strategiesWithDots = [

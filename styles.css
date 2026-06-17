@@ -1,6 +1,7 @@
 /* --- FILE EXPLORER STYLES --- */
 
-.nav-file-title.colored-tag-file {
+.nav-file-title.colored-tag-file,
+.nav-folder-title.colored-tag-file {
     position: relative;
     display: flex;
     align-items: center;
@@ -9,22 +10,34 @@
 /* Strategy: Text Color (and new combinations) */
 .nav-files-container .nav-file-title.strategy-text,
 .nav-files-container .nav-file-title.strategy-dots-before-text,
-.nav-files-container .nav-file-title.strategy-dots-after-text {
+.nav-files-container .nav-file-title.strategy-dots-after-text,
+.nav-files-container .nav-folder-title.strategy-text,
+.nav-files-container .nav-folder-title.strategy-dots-before-text,
+.nav-files-container .nav-folder-title.strategy-dots-after-text {
     color: var(--tag-file-color);
 }
 
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-text,
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text,
-.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text {
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-text,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-before-text,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-after-text {
     color: var(--tag-file-color);
 }
 
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-text .nav-file-title-content,
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text .nav-file-title-content,
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text .nav-file-title-content,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-text .nav-folder-title-content,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-before-text .nav-folder-title-content,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-after-text .nav-folder-title-content,
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-text .tree-item-inner,
 .nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text .tree-item-inner,
-.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text .tree-item-inner {
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text .tree-item-inner,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-text .tree-item-inner,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-before-text .tree-item-inner,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-dots-after-text .tree-item-inner {
     display: inline-block;
     max-width: 100%;
     color: transparent !important;
@@ -37,12 +50,14 @@
 }
 
 /* Strategy: Background Color */
-.nav-files-container .nav-file-title.strategy-background {
+.nav-files-container .nav-file-title.strategy-background,
+.nav-files-container .nav-folder-title.strategy-background {
     background-color: var(--tag-file-color);
     border-radius: var(--radius-s);
 }
 
-.nav-files-container .nav-file-title.has-gradient-tags.strategy-background {
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-background,
+.nav-files-container .nav-folder-title.has-gradient-tags.strategy-background {
     background-color: transparent;
     background-image: var(--tag-file-gradient);
 }
