@@ -87,6 +87,7 @@ interface TagsColorFilesSettings {
 	autoTagsEnabled: boolean;
 	autoTagColors: Record<string, string>;
 	autoTagHierarchyLightenScaling: number;
+	autoTagsGradientMultipleTags: boolean;
 	colorStrategy:
 		| "text"
 		| "background"
@@ -102,6 +103,7 @@ const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	autoTagsEnabled: false,
 	autoTagColors: {},
 	autoTagHierarchyLightenScaling: 0.2,
+	autoTagsGradientMultipleTags: false,
 	colorStrategy: "text",
 	dotSize: "default",
 };
@@ -355,8 +357,25 @@ export default class TagsColorFilesPlugin extends Plugin {
 			"strategy-after-text",
 			"strategy-dots-before-text",
 			"strategy-dots-after-text",
+			"has-gradient-tags",
 		);
 		el.style.removeProperty("--tag-file-color");
+		el.style.removeProperty("--tag-file-gradient");
+		const titleContentEls = el.querySelectorAll<HTMLElement>(
+			".nav-file-title-content, .tree-item-inner",
+		);
+		titleContentEls.forEach((titleContent) => {
+			titleContent.style.removeProperty("display");
+			titleContent.style.removeProperty("max-width");
+			titleContent.style.removeProperty("color");
+			titleContent.style.removeProperty("background");
+			titleContent.style.removeProperty("background-image");
+			titleContent.style.removeProperty("background-repeat");
+			titleContent.style.removeProperty("background-size");
+			titleContent.style.removeProperty("background-clip");
+			titleContent.style.removeProperty("-webkit-background-clip");
+			titleContent.style.removeProperty("-webkit-text-fill-color");
+		});
 		const existingDots = el.querySelector(".tag-dots-container");
 		if (existingDots) existingDots.remove();
 	}
@@ -398,6 +417,20 @@ export default class TagsColorFilesPlugin extends Plugin {
 				this.cleanElement(el);
 				const fileFolder = file.parent?.path ?? "";
 				const matchedColors: string[] = [];
+				const autoGradientColors: string[] = [];
+
+				if (
+					this.settings.autoTagsEnabled &&
+					this.settings.autoTagsGradientMultipleTags
+				) {
+					const seenTags = new Set<string>();
+					for (const tag of fileTags) {
+						const normalizedTag = normalizeTag(tag);
+						if (!normalizedTag || seenTags.has(normalizedTag)) continue;
+						seenTags.add(normalizedTag);
+						autoGradientColors.push(this.getAutoTagColor(normalizedTag));
+					}
+				}
 
 				for (const rule of normalizedRules) {
 					// Per-rule folder scope check (empty = applies everywhere)
@@ -419,6 +452,45 @@ export default class TagsColorFilesPlugin extends Plugin {
 					el.classList.add("colored-tag-file");
 					el.classList.add(`strategy-${this.settings.colorStrategy}`);
 					el.style.setProperty("--tag-file-color", matchedColors[0]);
+					if (
+						this.settings.autoTagsGradientMultipleTags &&
+						autoGradientColors.length > 1
+					) {
+						const gradient = `linear-gradient(90deg, ${autoGradientColors.join(", ")})`;
+						el.classList.add("has-gradient-tags");
+						el.style.setProperty("--tag-file-gradient", gradient);
+
+						const gradientTextStrategies = [
+							"text",
+							"dots-before-text",
+							"dots-after-text",
+						];
+						if (gradientTextStrategies.includes(this.settings.colorStrategy)) {
+							const titleContentEls = el.querySelectorAll<HTMLElement>(
+								".nav-file-title-content, .tree-item-inner",
+							);
+							titleContentEls.forEach((titleContent) => {
+								titleContent.style.setProperty("display", "inline-block");
+								titleContent.style.setProperty("max-width", "100%");
+								titleContent.style.setProperty("color", "transparent");
+								titleContent.style.setProperty("background", gradient);
+								titleContent.style.setProperty(
+									"background-repeat",
+									"no-repeat",
+								);
+								titleContent.style.setProperty("background-size", "100% 100%");
+								titleContent.style.setProperty("background-clip", "text");
+								titleContent.style.setProperty(
+									"-webkit-background-clip",
+									"text",
+								);
+								titleContent.style.setProperty(
+									"-webkit-text-fill-color",
+									"transparent",
+								);
+							});
+						}
+					}
 
 					const strategiesWithDots = [
 						"before-text",
@@ -944,6 +1016,19 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.autoTagsEnabled)
 					.onChange(async (value) => {
 						this.plugin.settings.autoTagsEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("AUTO_TAGS_GRADIENT_MULTIPLE_TAGS"))
+			.addToggle((toggle) =>
+				toggle
+					.setDisabled(!this.plugin.settings.autoTagsEnabled)
+					.setValue(this.plugin.settings.autoTagsGradientMultipleTags)
+					.onChange(async (value) => {
+						this.plugin.settings.autoTagsGradientMultipleTags = value;
 						await this.plugin.saveSettings();
 						this.display();
 					}),

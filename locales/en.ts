@@ -23,6 +23,7 @@ export default {
 	INVALID_FILE: "Error: Invalid file",
 	AUTO_TAGS_COLORING_SECTION: "Auto tags coloring",
 	AUTO_TAGS_ENABLE: "Enable",
+	AUTO_TAGS_GRADIENT_MULTIPLE_TAGS: "Gradient multiple tags",
 	AUTO_TAGS_HIERARCHY_LIGHTEN_SCALING: "Hierarchical tags lighten scaling",
 	AUTO_TAGS_EMPTY: "No tags found in the vault.",
 	COLORING_RULES_SECTION: "Coloring rules",

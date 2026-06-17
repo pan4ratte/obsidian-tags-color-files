@@ -13,10 +13,38 @@
     color: var(--tag-file-color);
 }
 
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-text,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text {
+    color: var(--tag-file-color);
+}
+
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-text .nav-file-title-content,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text .nav-file-title-content,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text .nav-file-title-content,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-text .tree-item-inner,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-before-text .tree-item-inner,
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-dots-after-text .tree-item-inner {
+    display: inline-block;
+    max-width: 100%;
+    color: transparent !important;
+    background: var(--tag-file-gradient) !important;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent !important;
+}
+
 /* Strategy: Background Color */
 .nav-files-container .nav-file-title.strategy-background {
     background-color: var(--tag-file-color);
     border-radius: var(--radius-s);
+}
+
+.nav-files-container .nav-file-title.has-gradient-tags.strategy-background {
+    background-color: transparent;
+    background-image: var(--tag-file-gradient);
 }
 
 /* --- DOTS SYSTEM --- */
