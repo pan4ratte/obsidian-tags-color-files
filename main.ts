@@ -421,6 +421,8 @@ export default class TagsColorFilesPlugin extends Plugin {
 			"strategy-dots-after-text",
 			"has-gradient-tags",
 		);
+		el.style.removeProperty("background");
+		el.style.removeProperty("background-image");
 		el.style.removeProperty("--tag-file-color");
 		el.style.removeProperty("--tag-file-gradient");
 		const titleContentEls = el.querySelectorAll<HTMLElement>(
@@ -454,17 +456,15 @@ export default class TagsColorFilesPlugin extends Plugin {
 				_folderScope: (c.folderScope ?? "").trim(),
 			}));
 
-		const normalizedAutoRules = this.settings.autoTagsEnabled
-			? this.getAllVaultTags().map((tag) => ({
-					tag,
-					color: this.getAutoTagColor(tag),
-					isNegative: false,
-					_normalized: tag,
-					_folderScope: "",
-				}))
-			: [];
-
-		const normalizedRules = [...normalizedManualRules, ...normalizedAutoRules];
+		const autoTagColorCache = new Map<string, string>();
+		const getCachedAutoTagColor = (normalizedTag: string) => {
+			let color = autoTagColorCache.get(normalizedTag);
+			if (!color) {
+				color = this.getAutoTagColor(normalizedTag);
+				autoTagColorCache.set(normalizedTag, color);
+			}
+			return color;
+		};
 
 		fileExplorers.forEach((leaf) => {
 			const navTitles = leaf.view.containerEl.querySelectorAll<HTMLElement>(
@@ -476,24 +476,21 @@ export default class TagsColorFilesPlugin extends Plugin {
 				if (!file) return;
 				const cache = this.app.metadataCache.getFileCache(file);
 				const fileTags = cache ? (getAllTags(cache) ?? []) : [];
+				const normalizedFileTags = Array.from(
+					new Set(
+						fileTags
+							.map((tag) => normalizeTag(tag).trim())
+							.filter(Boolean),
+					),
+				);
+				const manualFileTagSet = new Set(
+					fileTags.map((tag) => normalizeTag(tag)),
+				);
 				const fileFolder = file.parent?.path ?? "";
 				const matchedColors: string[] = [];
 				const autoGradientColors: string[] = [];
 
-				if (
-					this.settings.autoTagsEnabled &&
-					this.settings.autoTagsGradientMultipleTags
-				) {
-					const seenTags = new Set<string>();
-					for (const tag of fileTags) {
-						const normalizedTag = normalizeTag(tag);
-						if (!normalizedTag || seenTags.has(normalizedTag)) continue;
-						seenTags.add(normalizedTag);
-						autoGradientColors.push(this.getAutoTagColor(normalizedTag));
-					}
-				}
-
-				for (const rule of normalizedRules) {
+				for (const rule of normalizedManualRules) {
 					// Per-rule folder scope check (empty = applies everywhere)
 					if (rule._folderScope) {
 						const inScope =
@@ -501,11 +498,24 @@ export default class TagsColorFilesPlugin extends Plugin {
 							fileFolder.startsWith(rule._folderScope + "/");
 						if (!inScope) continue;
 					}
-					const hasTag = fileTags.some(
-						(tag) => normalizeTag(tag) === rule._normalized,
-					);
+					const hasTag = manualFileTagSet.has(rule._normalized);
 					if (rule.isNegative ? !hasTag : hasTag) {
 						matchedColors.push(rule.color);
+					}
+				}
+
+				const hasManualMatch = matchedColors.length > 0;
+				if (this.settings.autoTagsEnabled) {
+					for (const normalizedTag of normalizedFileTags) {
+						const autoColor = getCachedAutoTagColor(normalizedTag);
+						matchedColors.push(autoColor);
+						if (
+							!hasManualMatch &&
+							this.settings.autoTagsGradientMultipleTags &&
+							!autoGradientColors.includes(autoColor)
+						) {
+							autoGradientColors.push(autoColor);
+						}
 					}
 				}
 
@@ -522,12 +532,17 @@ export default class TagsColorFilesPlugin extends Plugin {
 						this.settings.colorStrategy,
 					);
 					if (
+						!hasManualMatch &&
+						this.settings.autoTagsEnabled &&
 						this.settings.autoTagsGradientMultipleTags &&
 						autoGradientColors.length > 1
 					) {
 						const gradient = `linear-gradient(90deg, ${autoGradientColors.join(", ")})`;
 						el.classList.add("has-gradient-tags");
 						el.style.setProperty("--tag-file-gradient", gradient);
+						if (this.settings.colorStrategy === "background") {
+							el.style.setProperty("background", gradient);
+						}
 
 						const gradientTextStrategies = [
 							"text",
