@@ -149,10 +149,22 @@
     flex-wrap: wrap;
 }
 
-/* Equal halves; each drops to its own full-width line when they no longer fit. */
+/* Equal halves; `max-content` keeps the icon + label from being squeezed, so a
+   button that no longer fits drops to its own full-width line instead. */
 .tags-color-files-settings-root .setting-item.tag-add-rule-setting > .setting-item-control button {
     flex: 1 1 0;
-    min-width: 150px;
+    min-width: max-content;
+    gap: var(--size-4-2);
+    --icon-size: var(--icon-s);
+    --icon-stroke: var(--icon-s-stroke-width);
+}
+
+/* Accent is a hover affordance here, not a permanent call-to-action, so neither
+   button carries .mod-cta. `--text-color` is the same hook Obsidian's own
+   `button.mod-cta` uses, so the label and the icon both follow. */
+.tags-color-files-settings-root .setting-item.tag-add-rule-setting > .setting-item-control button:hover {
+    background-color: var(--interactive-accent);
+    --text-color: var(--text-on-accent);
 }
 
 .plugin-description-container {

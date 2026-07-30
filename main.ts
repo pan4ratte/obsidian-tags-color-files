@@ -810,32 +810,32 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		new Setting(root)
 			.setClass("tag-add-rule-setting")
 			.setDesc(t("ADD_RULE_DESC"))
-			.addButton((btn) =>
-				btn
-					.setButtonText(t("ADD_FOLDER_RULE_BTN"))
-					.onClick(() => {
-						this.plugin.settings.generalRules.unshift({
-							tag: "",
-							color: "#4a90e2",
-							folderScope: "",
-						});
-						this.focusPending = -1;
-						this.rerender();
-					}),
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText(t("ADD_RULE_BTN"))
-					.setCta()
-					.onClick(() => {
-						this.plugin.settings.generalRules.unshift({
-							tag: "",
-							color: "#4a90e2",
-						});
-						this.focusPending = -1;
-						this.rerender();
-					}),
-			);
+			.addButton((btn) => {
+				// setButtonText() would overwrite the icon, so label the button by hand.
+				setIcon(btn.buttonEl, "lucide-folder");
+				btn.buttonEl.createSpan({ text: t("ADD_FOLDER_RULE_BTN") });
+				btn.onClick(() => {
+					this.plugin.settings.generalRules.unshift({
+						tag: "",
+						color: "#4a90e2",
+						folderScope: "",
+					});
+					this.focusPending = -1;
+					this.rerender();
+				});
+			})
+			.addButton((btn) => {
+				setIcon(btn.buttonEl, "lucide-tag");
+				btn.buttonEl.createSpan({ text: t("ADD_RULE_BTN") });
+				btn.onClick(() => {
+					this.plugin.settings.generalRules.unshift({
+						tag: "",
+						color: "#4a90e2",
+					});
+					this.focusPending = -1;
+					this.rerender();
+				});
+			});
 
 		this.errorBanner = root.createDiv({ cls: "tag-error-message" });
 
