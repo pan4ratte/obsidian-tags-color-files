@@ -6,6 +6,7 @@
 
 * The plugin settings were migrated to the declarative Obsidian 1.13.0 API — they are now discoverable through the settings search.
 * Fixed the settings layout under Obsidian 1.13: dropdowns and buttons are vertically centered in their rows again, and the rule-adding row now shows its description above two full-width buttons.
+* Fixed a bug where the settings scrolled back to the top whenever the rules list was redrawn — most noticeably when dragging a rule to reorder it, which made reordering long lists difficult.
 * The minimum Obsidian version was raised to 1.13.0. Users on older versions still get plugin version 2.0.0.
 
 

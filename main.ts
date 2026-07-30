@@ -635,12 +635,41 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		];
 	}
 
+	/** Nearest scrollable ancestor — the settings pane on desktop, the tab
+	 *  container on phones. */
+	private findScrollContainer(el: HTMLElement): HTMLElement | null {
+		for (let p = el.parentElement; p; p = p.parentElement) {
+			const overflowY = p.win.getComputedStyle(p).overflowY;
+			if (
+				(overflowY === "auto" || overflowY === "scroll") &&
+				p.scrollHeight > p.clientHeight
+			) {
+				return p;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Re-render the plugin's own root rather than calling `update()`, which would
 	 * re-reconcile Obsidian's definition list.
+	 *
+	 * renderBody() empties the root, which collapses the scroll container's
+	 * scrollHeight and makes the browser clamp its scrollTop to 0. Capture and
+	 * restore it so a re-render (reordering a rule by drag, deleting one, …)
+	 * leaves the view where the user left it instead of jumping to the top.
 	 */
 	private rerender(): void {
-		if (this.renderRoot) this.renderBody(this.renderRoot);
+		if (!this.renderRoot) return;
+		// Exception: adding a rule focuses the new input, so let the browser
+		// scroll that into view rather than restoring the old position.
+		const scroller =
+			this.focusPending === null
+				? this.findScrollContainer(this.renderRoot)
+				: null;
+		const scrollTop = scroller?.scrollTop ?? 0;
+		this.renderBody(this.renderRoot);
+		if (scroller) scroller.scrollTop = scrollTop;
 	}
 
 	private renderBody(root: HTMLElement): void {
