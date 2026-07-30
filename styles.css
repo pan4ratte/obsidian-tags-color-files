@@ -68,6 +68,93 @@
 
 /* --- SETTINGS TAB STYLES --- */
 
+/* --- Declarative settings host (Obsidian 1.13+) ---
+   getSettingDefinitions() returns a single group holding one render-only row,
+   which hosts this plugin's entirely custom settings DOM. The rules below undo
+   the group/row chrome Obsidian applies around that host so the tab keeps the
+   layout it had before the declarative-settings migration. */
+
+/* The plugin draws its own cards, so blank the group's card shell. */
+.tags-color-files-settings-group > .setting-items {
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+/* The host row is a bare container, not a setting row. Reaches 0,3,0 so it beats
+   Obsidian's `.setting-group .setting-item:not(.setting-item-heading)`. */
+.tags-color-files-settings-group .setting-item.tags-color-files-settings-anchor {
+    display: block;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.tags-color-files-settings-group .setting-item.tags-color-files-settings-anchor::before {
+    content: none;
+}
+
+/* Obsidian writes the definition's name/desc into the host row for search
+   indexing; the renderer draws its own heading and description, so hide it. */
+.tags-color-files-settings-anchor > .setting-item-info,
+.tags-color-files-settings-anchor > .setting-item-control {
+    display: none;
+}
+
+/* RESET — restores the standalone `.setting-item` card look this plugin's layout
+   was written against, undoing the flattening + dividers that
+   `.setting-group .setting-item:not(.setting-item-heading)` imposes on rows
+   nested inside a group.
+   ORDERING: this rule scores 0,3,0, the same as Obsidian's. Any rule that
+   re-asserts a row inside the render root MUST stay BELOW this block, or file
+   order will silently undo it. */
+.tags-color-files-settings-root .setting-item:not(.setting-item-heading) {
+    border: var(--setting-items-border-width) solid var(--setting-items-border-color);
+    background-color: var(--setting-items-background);
+    border-radius: var(--setting-items-radius);
+    padding: var(--size-4-4);
+    margin-bottom: var(--size-4-2);
+}
+
+.tags-color-files-settings-root .setting-item:not(.setting-item-heading)::before {
+    content: none;
+}
+
+/* Obsidian's base `.setting-item` top-aligns its control (align-items:
+   flex-start), which leaves dropdowns and buttons hanging at the top of rows
+   that have a multi-line description. This plugin's rows are laid out against
+   vertically centered controls, so restore that.
+   Narrow layouts are unaffected: the `@container (max-width: 400px)` rule turns
+   the row into a column and gives the info `align-self: flex-start` and the
+   control `width: 100%`, and the `.is-phone` rule scores 0,4,0 and still wins. */
+.tags-color-files-settings-root .setting-item:not(.setting-item-heading) {
+    align-items: center;
+}
+
+/* "Add rule" row: description on its own line, buttons filling the width below
+   it. Ties with the reset above at 0,3,0, so it MUST stay below it. */
+.tags-color-files-settings-root .setting-item.tag-add-rule-setting {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.tags-color-files-settings-root .setting-item.tag-add-rule-setting > .setting-item-info {
+    margin-inline-end: 0;
+}
+
+.tags-color-files-settings-root .setting-item.tag-add-rule-setting > .setting-item-control {
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+/* Equal halves; each drops to its own full-width line when they no longer fit. */
+.tags-color-files-settings-root .setting-item.tag-add-rule-setting > .setting-item-control button {
+    flex: 1 1 0;
+    min-width: 150px;
+}
+
 .plugin-description-container {
     margin-bottom: 24px;
     margin-left: 16px;

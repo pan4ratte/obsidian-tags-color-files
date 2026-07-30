@@ -10,6 +10,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	type SettingDefinitionItem,
 	setIcon,
 	TFile,
 } from "obsidian";
@@ -280,6 +281,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	focusPending: number | null = null;
 	ruleElements: { txt: HTMLInputElement; folderInput: HTMLInputElement | null; groupIdx: number }[] = [];
 	errorBanner: HTMLElement | null = null;
+	renderRoot: HTMLElement | null = null;
 
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) {
@@ -359,7 +361,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					const moved = rulesArray.splice(ruleIdx, 1)[0];
 					rulesArray.splice(ruleIdx - 1, 0, moved);
 					void this.plugin.saveSettings();
-					this.display();
+					this.rerender();
 				}
 			};
 			const downBtn = reorderContainer.createEl("button", {
@@ -371,7 +373,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					const moved = rulesArray.splice(ruleIdx, 1)[0];
 					rulesArray.splice(ruleIdx + 1, 0, moved);
 					void this.plugin.saveSettings();
-					this.display();
+					this.rerender();
 				}
 			};
 		} else {
@@ -402,7 +404,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				this.draggingGroupIdx = null;
 				this.draggingRuleIdx = null;
 				div.removeClass("is-dragging");
-				this.display();
+				this.rerender();
 			});
 
 			div.addEventListener("dragover", (e) => {
@@ -416,7 +418,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					rulesArray.splice(ruleIdx, 0, moved);
 					this.draggingRuleIdx = ruleIdx;
 					void this.plugin.saveSettings();
-					this.display();
+					this.rerender();
 				}
 			});
 		}
@@ -549,7 +551,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			if (!txt.value || txt.value.trim() === "") {
 				rulesArray.splice(ruleIdx, 1);
 				void this.plugin.saveSettings();
-				this.display();
+				this.rerender();
 			}
 		});
 
@@ -559,20 +561,96 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		del.onclick = () => {
 			rulesArray.splice(ruleIdx, 1);
 			void this.plugin.saveSettings();
-			this.display();
+			this.rerender();
 		};
 
 		this.ruleElements.push({ txt, folderInput, groupIdx });
 	}
 
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: "group",
+				cls: "tags-color-files-settings-group",
+				items: [
+					{
+						// `name`/`desc`/`aliases` feed the settings search index; the row's
+						// own label markup is hidden in CSS because renderBody() draws its
+						// own heading and description.
+						name: t("SETTINGS_TITLE"),
+						desc: t("PLUGIN_DESCRIPTION"),
+						aliases: [
+							"tag",
+							"tags",
+							"color",
+							"colors",
+							"coloring",
+							"colour",
+							"file explorer",
+							"highlight",
+							"rules",
+							"coloring rules",
+							"folder rule",
+							"general rule",
+							"text",
+							"background",
+							"dots",
+							"dots size",
+							"backup",
+							"restore",
+							"import",
+							"export",
+						],
+						render: (setting: Setting) => {
+							setting.settingEl.addClass("tags-color-files-settings-anchor");
+
+							// Build into settingEl — never into group.listEl, which Obsidian
+							// prunes to the rows it created after every render pass. Reuse an
+							// existing root so a re-render cannot duplicate the whole UI.
+							const existing =
+								setting.settingEl.querySelector<HTMLElement>(
+									":scope > .tags-color-files-settings-root",
+								);
+							this.renderBody(
+								existing ??
+									setting.settingEl.createDiv(
+										"tags-color-files-settings-root",
+									),
+							);
+
+							// Invoked on tab hide and before each re-render. Obsidian drops
+							// the rendered rows on tab switch, so the root is always rebuilt
+							// on the way back in.
+							return () => {
+								this.renderRoot = null;
+								this.ruleElements = [];
+								this.errorBanner = null;
+								this.draggingGroupIdx = null;
+								this.draggingRuleIdx = null;
+							};
+						},
+					},
+				],
+			},
+		];
+	}
+
+	/**
+	 * Re-render the plugin's own root rather than calling `update()`, which would
+	 * re-reconcile Obsidian's definition list.
+	 */
+	private rerender(): void {
+		if (this.renderRoot) this.renderBody(this.renderRoot);
+	}
+
+	private renderBody(root: HTMLElement): void {
+		this.renderRoot = root;
+		root.empty();
 		this.ruleElements = [];
 
-		new Setting(containerEl).setName(t("SETTINGS_TITLE")).setHeading();
+		new Setting(root).setName(t("SETTINGS_TITLE")).setHeading();
 
-		const descContainer = containerEl.createDiv({
+		const descContainer = root.createDiv({
 			cls: "plugin-description-container",
 		});
 		descContainer.createEl("p", {
@@ -580,9 +658,9 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			cls: "setting-item-description",
 		});
 
-		new Setting(containerEl).setName(t("GENERAL_SECTION")).setHeading();
+		new Setting(root).setName(t("GENERAL_SECTION")).setHeading();
 
-		new Setting(containerEl)
+		new Setting(root)
 			.setName(t("COLOR_METHOD_NAME"))
 			.setDesc(t("COLOR_METHOD_DESC"))
 			.addDropdown((dropdown) => {
@@ -598,7 +676,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						this.plugin.settings.colorStrategy =
 							value as TagsColorFilesSettings["colorStrategy"];
 						await this.plugin.saveSettings();
-						this.display();
+						this.rerender();
 					});
 			});
 
@@ -609,7 +687,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			"dots-after-text",
 		];
 		if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
-			new Setting(containerEl)
+			new Setting(root)
 				.setName(t("DOT_SIZE_NAME"))
 				.setDesc(t("DOT_SIZE_DESC"))
 				.addDropdown((dropdown) => {
@@ -627,7 +705,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		}
 
 		// Backup section
-		const backupSetting = new Setting(containerEl).setName(t("BACKUP_RESTORE"));
+		const backupSetting = new Setting(root).setName(t("BACKUP_RESTORE"));
 
 		if (!Platform.isMobile) {
 			backupSetting.addButton((btn) =>
@@ -677,7 +755,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 										? obj.generalRules
 										: [];
 									void this.plugin.saveSettings();
-									this.display();
+									this.rerender();
 									new Notice(t("IMPORTED"));
 									return;
 								}
@@ -696,11 +774,12 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		// ════════════════════════════════════
 		// Coloring rules section
 		// ════════════════════════════════════
-		new Setting(containerEl)
+		new Setting(root)
 			.setName(t("COLORING_RULES_SECTION"))
 			.setHeading();
 
-		new Setting(containerEl)
+		new Setting(root)
+			.setClass("tag-add-rule-setting")
 			.setDesc(t("ADD_RULE_DESC"))
 			.addButton((btn) =>
 				btn
@@ -712,7 +791,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							folderScope: "",
 						});
 						this.focusPending = -1;
-						this.display();
+						this.rerender();
 					}),
 			)
 			.addButton((btn) =>
@@ -725,13 +804,13 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							color: "#4a90e2",
 						});
 						this.focusPending = -1;
-						this.display();
+						this.rerender();
 					}),
 			);
 
-		this.errorBanner = containerEl.createDiv({ cls: "tag-error-message" });
+		this.errorBanner = root.createDiv({ cls: "tag-error-message" });
 
-		const generalRulesContainer = containerEl.createDiv({
+		const generalRulesContainer = root.createDiv({
 			cls: "tag-rules-list",
 		});
 
