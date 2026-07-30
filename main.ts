@@ -746,12 +746,12 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					);
 					const blob = new Blob([data], { type: "application/json" });
 					const url = URL.createObjectURL(blob);
-					const a = activeDocument.createElement("a");
-					a.href = url;
-					a.download = "data.json";
-					activeDocument.body.appendChild(a);
+					const a = activeDocument.body.createEl("a", {
+						href: url,
+						attr: { download: "data.json" },
+					});
 					a.click();
-					activeDocument.body.removeChild(a);
+					a.detach();
 					URL.revokeObjectURL(url);
 					new Notice(t("EXPORTED"));
 				}),
