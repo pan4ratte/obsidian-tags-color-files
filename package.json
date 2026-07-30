@@ -1,7 +1,7 @@
 {
 	"name": "tags-color-files",
-	"version": "2.0.0",
-	"description": "Allows you to automatically color files in file explorer based on the tags they contain.",
+	"version": "2.1.0",
+	"description": "Color files in file explorer automatically, based on the tags they contain and the rules you create.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

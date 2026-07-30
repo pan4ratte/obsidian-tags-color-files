@@ -1,9 +1,9 @@
 {
 	"id": "tags-color-files",
 	"name": "Tags Color Files",
-	"version": "2.0.0",
-	"minAppVersion": "1.7.2",
-	"description": "Allows you to automatically color files in file explorer based on the tags they contain.",
+	"version": "2.1.0",
+	"minAppVersion": "1.13.0",
+	"description": "Color files in file explorer automatically, based on the tags they contain and the rules you create.",
 	"author": "pan4ratte",
 	"authorUrl": "https://github.com/pan4ratte/",
 	"isDesktopOnly": false
