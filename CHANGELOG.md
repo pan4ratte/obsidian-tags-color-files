@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.1
+
+### UI/UX enhancements and bug fixes
+
+* Minor UI tweaks.
+* Safety and stability fixes.
+
+
 ## 2.1.0
 
 ### UI/UX enhancements and bug fixes
