@@ -1,6 +1,6 @@
 {
 	"name": "tags-color-files",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"description": "Color files in file explorer automatically, based on the tags they contain and the rules you create.",
 	"main": "main.js",
 	"scripts": {
