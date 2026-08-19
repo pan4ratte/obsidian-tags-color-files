@@ -107,11 +107,16 @@
    was written against, undoing the flattening + dividers that
    `.setting-group .setting-item:not(.setting-item-heading)` imposes on rows
    nested inside a group.
+   BORDER: hardcoded 1px rather than `var(--setting-items-border-width)`, which
+   Obsidian defines as `0` globally — grouped rows are separated by dividers, not
+   outlines, so the variable left every option row borderless while the rule rows
+   below drew a 1px outline. Matching `.tag-color-setting-item` keeps the whole
+   tab consistent.
    ORDERING: this rule scores 0,3,0, the same as Obsidian's. Any rule that
    re-asserts a row inside the render root MUST stay BELOW this block, or file
    order will silently undo it. */
 .tags-color-files-settings-root .setting-item:not(.setting-item-heading) {
-    border: var(--setting-items-border-width) solid var(--setting-items-border-color);
+    border: 1px solid var(--setting-items-border-color);
     background-color: var(--setting-items-background);
     border-radius: var(--setting-items-radius);
     padding: var(--size-4-4);
