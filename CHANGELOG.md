@@ -2,9 +2,13 @@
 
 ## 2.2.0
 
+### New features
+
+* **Bases support.** A new "Color file names in Bases" toggle in the general settings applies the coloring rules to the file names listed in Bases table and list views. Only text is colored, whichever coloring method is selected.
+
 ### UI/UX enhancements and bug fixes
 
-* Fixed a bug where the rule color was dropped from a file name while the pointer hovered over it, showing the default text color instead. This affected the "Text", "Dots before text + text" and "Dots after text + text" coloring methods; the rule color now stays applied through hovering, including on the currently open or selected file.
+* Fixed a bug where the rule color was dropped from a file name while the pointer hovered over it, showing the default text color instead.
 
 
 ## 2.1.1

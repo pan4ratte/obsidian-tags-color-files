@@ -93,12 +93,25 @@ interface TagsColorFilesSettings {
 		| "dots-before-text"
 		| "dots-after-text";
 	dotSize: "small" | "default" | "big";
+	/** Also color the file names Bases renders in its table and list views. */
+	applyToBases: boolean;
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	generalRules: [],
 	colorStrategy: "text",
 	dotSize: "default",
+	applyToBases: false,
+};
+
+/** Marks a Bases file-name link the plugin has colored, so it can be found
+ *  again for cleanup without re-deriving where it lives. */
+const BASES_COLORED_CLASS = "colored-tag-base-file";
+
+/** A rule with its tag and folder scope pre-normalized once per update cycle. */
+type NormalizedRule = TagColorConfig & {
+	_normalized: string;
+	_folderScope: string;
 };
 
 export default class TagsColorFilesPlugin extends Plugin {
@@ -124,10 +137,17 @@ export default class TagsColorFilesPlugin extends Plugin {
 			let shouldUpdate = false;
 			for (const m of mutations) {
 				for (const node of Array.from(m.addedNodes)) {
+					if (node.nodeType !== Node.ELEMENT_NODE) continue;
+					const el = node as HTMLElement;
 					if (
-						node.nodeType === Node.ELEMENT_NODE &&
-						((node as HTMLElement).classList.contains("nav-file") ||
-							(node as HTMLElement).querySelector(".nav-file-title"))
+						el.classList.contains("nav-file") ||
+						el.querySelector(".nav-file-title") ||
+						// Bases virtualizes its rows: scrolling recycles a cell onto a
+						// different entry and re-renders the link from scratch, which
+						// drops the color. Coloring only sets a class and a custom
+						// property on existing elements, so re-acting to these
+						// mutations cannot feed the observer its own output.
+						(this.settings.applyToBases && el.closest(".bases-view"))
 					) {
 						shouldUpdate = true;
 						break;
@@ -176,6 +196,18 @@ export default class TagsColorFilesPlugin extends Plugin {
 				.querySelectorAll<HTMLElement>(".nav-file-title")
 				.forEach((el) => this.cleanElement(el));
 		});
+		this.removeBasesColors();
+	}
+
+	/** Cleared by class rather than by position, so a link that has since been
+	 *  scrolled out of a name cell is still found. */
+	private removeBasesColors() {
+		activeDocument
+			.querySelectorAll<HTMLElement>(`.${BASES_COLORED_CLASS}`)
+			.forEach((el) => {
+				el.classList.remove(BASES_COLORED_CLASS);
+				el.style.removeProperty("--tag-file-color");
+			});
 	}
 
 	private cleanElement(el: HTMLElement) {
@@ -194,17 +226,107 @@ export default class TagsColorFilesPlugin extends Plugin {
 		if (existingDots) existingDots.remove();
 	}
 
+	/** Colors matching `file`, in rule order — first one wins for single-color
+	 *  strategies, the first three become dots. */
+	private matchColors(file: TFile, rules: NormalizedRule[]): string[] {
+		const cache = this.app.metadataCache.getFileCache(file);
+		const fileTags = cache ? (getAllTags(cache) ?? []) : [];
+		const fileFolder = file.parent?.path ?? "";
+		const matchedColors: string[] = [];
+
+		for (const rule of rules) {
+			// Per-rule folder scope check (empty = applies everywhere)
+			if (rule._folderScope) {
+				const inScope =
+					fileFolder === rule._folderScope ||
+					fileFolder.startsWith(rule._folderScope + "/");
+				if (!inScope) continue;
+			}
+			const hasTag = fileTags.some(
+				(tag) => tag.replace(/^#/, "").toLowerCase() === rule._normalized,
+			);
+			if (rule.isNegative ? !hasTag : hasTag) {
+				matchedColors.push(rule.color);
+			}
+		}
+		return matchedColors;
+	}
+
+	/**
+	 * Bases renders the entry's own name through `renderFileLink`, which emits a
+	 * `.internal-link` carrying the file path in `data-href`. Link-typed
+	 * property cells emit the same markup, so the name cell is picked out by
+	 * where it sits rather than by the link itself.
+	 *
+	 * Cards view is deliberately absent: its title cell renders `file.name` as a
+	 * plain string, so nothing in the DOM says which file the card is for.
+	 */
+	private getBasesNameLinks(): HTMLElement[] {
+		const links: HTMLElement[] = [];
+		activeDocument
+			.querySelectorAll<HTMLElement>(".bases-view")
+			.forEach((view) => {
+				// Table view tags each cell with the property it renders.
+				view
+					.querySelectorAll<HTMLElement>(
+						'.bases-td[data-property="file.name"] .internal-link[data-href]',
+					)
+					.forEach((el) => links.push(el));
+
+				// List view builds cells as bare spans with no property id. The
+				// entry's name is the first one it renders — the item's title line.
+				view
+					.querySelectorAll<HTMLElement>(
+						".bases-list-item > .bases-list-item-properties:not(.nested)",
+					)
+					.forEach((props) => {
+						const link = props
+							.querySelector(".bases-list-property")
+							?.querySelector<HTMLElement>(".internal-link[data-href]");
+						if (link) links.push(link);
+					});
+			});
+		return links;
+	}
+
+	/**
+	 * Bases file names always take the text color, whichever coloring method is
+	 * selected — dots and backgrounds are laid out against the file explorer's
+	 * fixed-height rows and have nowhere to sit inside a Bases cell.
+	 */
+	private updateBasesColors(rules: NormalizedRule[]) {
+		this.removeBasesColors();
+		if (!this.settings.applyToBases) return;
+
+		for (const link of this.getBasesNameLinks()) {
+			const href = link.getAttribute("data-href");
+			if (!href) continue;
+			// `data-href` holds the full path for a name cell, but resolve it as a
+			// link target anyway so a shortened form still lands on the right file.
+			const file = this.app.metadataCache.getFirstLinkpathDest(href, "");
+			if (!(file instanceof TFile) || file.extension !== "md") continue;
+
+			const matchedColors = this.matchColors(file, rules);
+			if (matchedColors.length === 0) continue;
+
+			link.classList.add(BASES_COLORED_CLASS);
+			link.style.setProperty("--tag-file-color", matchedColors[0]);
+		}
+	}
+
 	private _updateFileColors() {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
 
 		// Pre-normalize rules once per cycle
-		const normalizedRules = this.settings.generalRules
+		const normalizedRules: NormalizedRule[] = this.settings.generalRules
 			.filter((c) => c.tag)
 			.map((c) => ({
 				...c,
 				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
 				_folderScope: (c.folderScope ?? "").trim(),
 			}));
+
+		this.updateBasesColors(normalizedRules);
 
 		fileExplorers.forEach((leaf) => {
 			const navFiles =
@@ -214,28 +336,8 @@ export default class TagsColorFilesPlugin extends Plugin {
 				if (!path) return;
 				const file = this.app.vault.getAbstractFileByPath(path);
 				if (!(file instanceof TFile) || file.extension !== "md") return;
-				const cache = this.app.metadataCache.getFileCache(file);
-				const fileTags = cache ? (getAllTags(cache) ?? []) : [];
 				this.cleanElement(el);
-				const fileFolder = file.parent?.path ?? "";
-				const matchedColors: string[] = [];
-
-				for (const rule of normalizedRules) {
-					// Per-rule folder scope check (empty = applies everywhere)
-					if (rule._folderScope) {
-						const inScope =
-							fileFolder === rule._folderScope ||
-							fileFolder.startsWith(rule._folderScope + "/");
-						if (!inScope) continue;
-					}
-					const hasTag = fileTags.some(
-						(tag) =>
-							tag.replace(/^#/, "").toLowerCase() === rule._normalized,
-					);
-					if (rule.isNegative ? !hasTag : hasTag) {
-						matchedColors.push(rule.color);
-					}
-				}
+				const matchedColors = this.matchColors(file, normalizedRules);
 
 				if (matchedColors.length > 0) {
 					el.classList.add("colored-tag-file");
@@ -587,6 +689,9 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							"coloring",
 							"colour",
 							"file explorer",
+							"bases",
+							"base",
+							"table",
 							"highlight",
 							"rules",
 							"coloring rules",
@@ -732,6 +837,18 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 						});
 				});
 		}
+
+		new Setting(root)
+			.setName(t("BASES_NAME"))
+			.setDesc(t("BASES_DESC"))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.applyToBases)
+					.onChange(async (value: boolean) => {
+						this.plugin.settings.applyToBases = value;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		// Backup section
 		const backupSetting = new Setting(root).setName(t("BACKUP_RESTORE"));

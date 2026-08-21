@@ -80,6 +80,19 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
 .tag-dots-container.dots-big .tag-dot { width: 8px; height: 8px; }
 
 
+/* --- BASES --- */
+
+/* Bases draws a file name as an `.internal-link` inside `.markdown-rendered`,
+   which paints it `color: var(--link-color)` and swaps in `--link-color-hover`
+   on hover. Redefining those variables on the link itself, instead of setting
+   `color`, keeps the rule color through every link state without having to
+   outscore each of Obsidian's rules separately. */
+.bases-view .internal-link.colored-tag-base-file {
+    --link-color: var(--tag-file-color);
+    --link-color-hover: var(--tag-file-color);
+    --link-unresolved-color: var(--tag-file-color);
+}
+
 /* --- SETTINGS TAB STYLES --- */
 
 /* --- Declarative settings host (Obsidian 1.13+) ---
