@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.0
+
+### UI/UX enhancements and bug fixes
+
+* Fixed a bug where the rule color was dropped from a file name while the pointer hovered over it, showing the default text color instead. This affected the "Text", "Dots before text + text" and "Dots after text + text" coloring methods; the rule color now stays applied through hovering, including on the currently open or selected file.
+
+
 ## 2.1.1
 
 ### UI/UX enhancements and bug fixes

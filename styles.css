@@ -13,6 +13,20 @@
     color: var(--tag-file-color);
 }
 
+/* Keep the rule color through the pointer states.
+   Obsidian repaints a hovered nav item with
+   `body:not(.is-grabbing) .tree-item-self.is-clickable:hover` — plus the
+   `.is-active` / `.is-selected` hover variants — each scoring 0,4,1, which
+   beats the 0,3,0 rule above and resets the title to `--nav-item-color-hover`
+   while the pointer is over it. Re-assert the tag color at 0,5,1 so it wins
+   against all three. The unhovered `.is-active` / `.is-selected` rules score
+   only 0,2,0, so the rule above already covers those. */
+body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-text:hover,
+body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-before-text:hover,
+body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-text:hover {
+    color: var(--tag-file-color);
+}
+
 /* Strategy: Background Color */
 .nav-files-container .nav-file-title.strategy-background {
     background-color: var(--tag-file-color);
