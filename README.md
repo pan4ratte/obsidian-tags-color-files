@@ -9,19 +9,25 @@ This plugin allows you to automatically highlight files in your Obsidian explore
 
 ## Features
 
-1. Automatic file highlighting in the Obsidian file explorer based on the tag-color rules that you create.
+### 1. Automatic highlighting in the file explorer
 
-2. Creation of folder-specific rules that will color files only inside it.
+Files are colored in the Obsidian file explorer according to the tag-color rules that you create. Just add a tag for which a rule was created to a note, and the plugin applies the color right away. By default rules color the notes that contain the specified tag, but negative highlighting of the files without that tag is available as well. Finally, apart from general rules you can set folder rules, to highlight notes only inside a chosen folder.
 
-3. Tag prioritization in the plugin settings. Useful for cases, when a single file contains more than one tag for which coloring rule was created. The plugin will select the tag with the highest priority to color that file.
+### 2. Six coloring methods
 
-4. Negative highlighting. By default, every new rule highlights files with a specified tag, but you can invert this behavior and highlight files without the tag instead.
+Both the basic "Text" and "Background" methods are available, as well as the more advanced "Dots before/after text" and "Dots before/after text + text". When you choose any of the methods with dots, up to three colored dots are displayed simultaneously in the file explorer if a single file contains several tags for which coloring rules have been created. Choice of the dots sizes is also available.
 
-5. Coloring method choices: not only basic ones, like "Text" and "Background", but also advanced, such as "Dots before/after text" and "Dots before/after text + text". Choice of the dots sizes is also available. When you choose advanced options, up to three colored dots are displayed simultaneously in the file explorer if a single file contains multiple tags for which coloring rules have been created.
+### 3. Tag prioritization
 
-6. Export and import of plugin settings to a file.
+Rules are ordered in the plugin settings by dragging them or with the arrows. When a single file contains more than one tag for which a coloring rule was created, the plugin colors that file by the rule with the highest priority.
 
-7. Localization support. Currently available languages: English and Russian.
+### 4. Coloring files in Bases
+
+Coloring in Bases can optionally be enabled for the table and list views. Only the text of the file name is colored there, whichever coloring method is selected.
+
+### 5. Backup and restore
+
+All of your rules can be exported from and imported back into the plugin. Export is available on desktop only, because of mobile platform limitations.
 
 
 ## Plugin Use Case
@@ -33,7 +39,7 @@ Initially, the plugin was created for my personal needs. When reading literature
 
 ### Option 1: Obsidian plugin store
 
-1. In Obsidian settings open the tab "Community plugins" and click "Browse" button.
+1. In Obsidian settings open the tab "Community plugins" and click the "Browse" button.
 
 2. In the search bar type `Tags Color Files`, click on the result, then "Install" and "Enable" buttons.
 
@@ -50,29 +56,6 @@ If you want to test beta-versions of the plugin or use previous versions, you ca
 3. In the window that appears, paste the link to the `Tags Color Files` plugin repository: [https://github.com/pan4ratte/obsidian-tags-color-files](https://github.com/pan4ratte/obsidian-tags-color-files)
 
 4. Under “Select a version” choose the desired version and click the “Add plugin” button. The plugin will be automatically installed and will be ready to use.
-
-
-## Contributions and Roadmap
-
-I am open to suggestions and new ideas that expand the plugin's functionality. Below are some ideas for new features and updates — some of them I cannot implement myself (I'm not a programmer), but they would be huge quality of life improvements:
-
-- [x] ~~Visual enhancement of all dots coloring methods. Currently I am not completely satisfied with their integration into the Obsidian's interface. They should be updated to avoid conflicts with other interface elements.~~
-
-- [x] ~~Plugin optimization for Obsidian mobile.~~
-
-- [x] ~~Error message if the user inputs a tag with invalid formatting when creating a new coloring rule.~~
-
-- [x] ~~Prevention of creation of two rules for the same tag.~~
-
-- [x] ~~Suggestions of existing tags while creating a new rule.~~
-
-- [x] ~~An option to choose between three sizes for "Dots ..." coloring methods: default, smaller, bigger.~~
-
-- [ ] Export option on mobile devices. For now, it is available only on desktop and was deleted from mobile devices because I could not make it work.
-
-### Knows Bugs
-
-- [x] ~~Under certain conditions, dragging and dropping a tag might result in deletion of that tag from the plugin database.~~
 
 
 ## About the Author
