@@ -1,7 +1,7 @@
 {
 	"id": "tags-color-files",
 	"name": "Tags Color Files",
-	"version": "2.1.1",
+	"version": "2.2.0",
 	"minAppVersion": "1.13.0",
 	"description": "Color files in file explorer automatically, based on the tags they contain and the rules you create.",
 	"author": "pan4ratte",
