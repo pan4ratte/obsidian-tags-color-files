@@ -428,3 +428,122 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     flex: 1 1 180px;
     min-width: 0;
 }
+
+
+/* --- CHANGELOG NOTICE AND MODAL ---
+   Borrowed from the sibling Advanced Word Count plugin, so the changelogs of the
+   plugins read alike. */
+
+/* What this release brought, as a card at the head of the settings, until it is
+   dismissed. `overflow` is for the closing: the card is animated down to no
+   height, and what stands in it is cut rather than spilling over what's below. */
+.tag-changelog-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-4-2);
+    margin-bottom: 16px;
+    padding: var(--size-4-2) var(--size-4-4);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--setting-items-radius);
+    background: var(--setting-items-background);
+    overflow: hidden;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+/* Grows to fill the row, but wants at least ~16em: when there isn't that much room
+   beside the buttons, the buttons wrap under it instead of squeezing it. */
+.tag-changelog-notice-text {
+    flex: 1 1 16em;
+    min-width: 0;
+    color: var(--text-accent);
+}
+
+/* Marks the card as an announcement rather than another settings note. */
+.tag-changelog-icon {
+    display: flex;
+    flex: none;
+    color: var(--text-accent);
+}
+
+.tag-changelog-icon svg {
+    width: var(--icon-s);
+    height: var(--icon-s);
+}
+
+/* Right-aligned whether beside the text or wrapped under it. */
+.tag-changelog-actions {
+    display: flex;
+    gap: var(--size-4-2);
+    margin-left: auto;
+}
+
+/* The two buttons, both plain at rest. */
+.tag-changelog-open,
+.tag-changelog-dismiss {
+    flex: none;
+    font-size: var(--font-ui-smaller);
+}
+
+/* "See what's new" takes the accent only under the pointer (or keyboard focus).
+   Scoped under the card to out-rank Obsidian's own button:hover. */
+.tag-changelog-notice .tag-changelog-open:hover,
+.tag-changelog-notice .tag-changelog-open:focus-visible {
+    background-color: var(--interactive-accent-hover);
+    color: var(--text-on-accent);
+}
+
+/* The changelog window. Carries no `markdown-rendered` class — that one sizes
+   markdown for reading a note, far larger than the settings this window is
+   opened from, and it would override every size below. */
+.tag-markdown-modal {
+    max-width: 680px;
+
+    /* Obsidian turns selection off inside a modal; a page meant to be read and
+       quoted from has no use for that. */
+    user-select: text;
+    cursor: auto;
+}
+
+.tag-markdown-modal * {
+    user-select: text;
+}
+
+.tag-markdown-modal h1 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: calc(var(--font-ui-large) * 1.2);
+    line-height: var(--line-height-tight);
+}
+
+.tag-markdown-modal h2 {
+    margin-top: var(--size-4-6);
+    margin-bottom: 12px;
+    font-size: var(--font-ui-large);
+}
+
+.tag-markdown-modal h3 {
+    margin-top: 20px;
+    margin-bottom: 8px;
+    font-size: var(--font-ui-medium);
+    color: var(--text-normal);
+}
+
+.tag-markdown-modal p,
+.tag-markdown-modal li {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    line-height: var(--line-height-normal);
+}
+
+.tag-markdown-modal ul,
+.tag-markdown-modal ol {
+    padding-left: 20px;
+    margin-bottom: 12px;
+}
+
+.tag-markdown-modal hr {
+    margin: 20px 0;
+    border-color: var(--background-modifier-border);
+}

@@ -4,136 +4,142 @@
 
 ### New features
 
-* **Coloring links to notes.** A new "Color links to notes" toggle in the general settings applies the coloring rules to wikilinks inside notes, in the editor (live preview and source mode) and in reading view. A link takes the color of the note it points to; only text is colored, whichever coloring method is selected.
+* **Coloring wikilinks in notes.** A new "Color links to notes" toggle has been added to the general settings. When it's on, the coloring rules also apply to wikilinks inside notes. A link takes the color of the note it links to.
+* **Changelog in the plugin.** After an update, the plugin settings show a notification from which you can open the changelog of the new version. Once dismissed, it won't appear again until the next update. The changelog can also be opened with the "View changelog" command.
+
+### Improvements and bug fixes
+
+* The general settings of the plugin are now combined into one shared block.
+* The plugin title and description were removed from the top of the settings tab, in line with Obsidian's guidelines.
 
 
 ## 2.2.0
 
 ### New features
 
-* **Bases support.** A new "Color file names in Bases" toggle in the general settings applies the coloring rules to the file names listed in Bases table and list views. Only text is colored, whichever coloring method is selected.
+* **Bases support.** A new "Color file names in Bases" toggle has been added to the general settings. When it's on, the coloring rules apply to the file names in the Bases "Table" and "List" views. Whichever coloring method is selected, only the text color changes.
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
-* Fixed a bug where the rule color was dropped from a file name while the pointer hovered over it, showing the default text color instead.
+* Fixed a bug where hovering the pointer over a file name dropped the color set by the rule, and the name was shown in the default text color.
 
 
 ## 2.1.1
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
 * Minor UI tweaks.
-* Safety and stability fixes.
+* Fixes that improve security and stability.
 
 
 ## 2.1.0
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
-* The plugin settings were migrated to the declarative Obsidian 1.13.0 API — they are now discoverable through the settings search.
-* Fixed a bug where the settings scrolled back to the top whenever the rules list was redrawn — most noticeably when dragging a rule to reorder it, which made reordering long lists difficult.
-* The minimum Obsidian version was raised to 1.13.0. Users on older versions still get plugin version 2.0.0.
+* The plugin settings were migrated to the declarative Obsidian 1.13.0 API — they can now be found through the settings search.
+* Fixed a bug where the settings scrolled back to the top every time the rules list was redrawn. It was most disruptive when dragging rules: reordering a long list was very inconvenient.
+* The minimum Obsidian version was raised to 1.13.0. Users of earlier Obsidian versions still get plugin version 2.0.0.
 
 
 ## 2.0.0
 
 ### Major update: folder rules
 
-> **Notice:** your existing rules almost certainly will stop working after the update. A backup is highly recommended.
+> **Notice:** after the update, rules created earlier will almost certainly stop working. We strongly recommend making a backup beforehand.
 
-This release introduces one major change and multiple quality-of-life enhancements.
+This release brings one major change and many smaller improvements that make working with the plugin more convenient.
 
-* **Folder rules.** Apply coloring only to the files inside a specified folder. Thanks to @filipjaruska for the idea.
-* **New filter for positive/negative tag matching.**
-* New design and layout for rules of both types.
+* **Folder rules.** You can now color only the files inside a chosen folder. Thanks to @filipjaruska for the idea.
+* **New filter: a rule can check for either the presence or the absence of a tag.**
+* Updated design and layout of the elements in rules of both types.
 
 ### Performance optimizations and fixes
 
 * Fixed a bug where non-text files were not skipped during scanning.
-* Debounced DOM updates.
-* Single-pass tag/folder normalization.
+* DOM updates are now deferred and batched (debounced).
+* Tags and folders are normalized in a single pass.
 
 ### Other
 
-* READMEs were updated.
-* Locales were updated.
+* README files were updated.
+* Interface translations were updated.
 
-Thanks to @filipjaruska for his contributions in PR #4.
+Thanks to @filipjaruska for the help in PR #4.
 
 
 ## 1.5.0
 
 ### New features
 
-* **Negative tag matching** by @filipjaruska — now you can choose whether the rule should check if the tag is present or absent in the notes (PR #3).
+* **Checking for a missing tag** (by @filipjaruska, PR #3). You can now choose when a rule applies: when the note has the tag, or when it doesn't.
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
 * Fixed a settings export bug.
-* Updated the features description in the READMEs.
+* Updated the description of the plugin's features in the README files.
 
 ### Other
 
-* Added artifact attestation.
+* Added build artifact attestation.
 * Updated `.gitignore`.
 
-@filipjaruska made their first contribution in PR #3.
+First contribution to the project by @filipjaruska: PR #3.
 
 
 ## 1.4.2
 
-### We're in the store now! 🔥
+### The plugin is now in the store! 🔥
 
-First official release for the Obsidian plugin store, with minor updates and fixes for stability and safety.
+First official release in the Obsidian plugin store. It also includes minor updates and fixes that improve stability and safety.
 
-Find the plugin in the store: https://community.obsidian.md/plugins/tags-color-files
+The plugin's page in the store: https://community.obsidian.md/plugins/tags-color-files
 
 
 ## 1.4.1
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
-* Some locales updates.
-* Updated styles to move the dots closer to note files, by @egorgvo (PR #2).
+* Interface translations were updated.
+* The dots are now placed closer to file names (by @egorgvo, PR #2).
 
-@egorgvo made their first contribution in PR #1.
+First contribution to the project by @egorgvo: PR #1.
 
 
 ## 1.4.0
 
 ### New features
 
-* Added the new coloring methods "Dots before text + text" and "Dots after text + text", which combine the already existing methods.
+* Added the coloring methods "Dots before text + text" and "Dots after text + text", which combine the already existing methods.
 
 
 ## 1.3.2
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
-* Hotfixes for the previous release.
-* Removed the export button on mobile devices due to inability to make it work. It might return later.
+* Hotfixes for bugs in the previous release.
+* The export button was removed on mobile devices, as it hasn't been possible to make it work yet. It might return later.
 
 
 ## 1.3.1
 
-### UI/UX enhancements and bug fixes
+### Improvements and bug fixes
 
-* Hotfixes for export (mobile) and for the saving-to-database logic (mobile and desktop).
+* Hotfixes for export (on mobile devices) and for saving plugin data (on mobile devices and desktop).
 
 
 ## 1.3.0
 
 ### New features
 
-* Complete mobile optimization.
-* New error message when an invalid tag name is entered while creating a new rule.
-* UI/UX design enhancements.
+* The plugin is now fully adapted for mobile devices.
+* An error message now appears if an invalid tag name is entered while creating a rule.
+* Improved interface design.
 
-### Bugs and other fixes
+### Bug fixes and other changes
 
-* READMEs updates and corrections.
-* Various fixes for the Obsidian community plugins review process.
-* Locales updates.
+* README files were updated and corrected.
+* Various fixes following the plugin's review before publication in the Obsidian plugin store.
+* Interface translations were updated.
 
 
 ## 1.2.0
@@ -141,23 +147,23 @@ Find the plugin in the store: https://community.obsidian.md/plugins/tags-color-f
 ### New features
 
 * Added an error message when conflicting rules are created.
-* From now on the plugin ignores the `#` symbol and the input casing when a new coloring rule is created.
-* The drag-and-drop function for coloring rules was completely rewritten and now looks much fancier.
+* The plugin now ignores the `#` symbol and letter case when a coloring rule is created.
+* Dragging coloring rules was completely rewritten and now looks much nicer.
 
 ### Bug fixes and other improvements
 
-* Fixed deletion of tags from the plugin database when dragging and dropping them in the plugin settings.
-* Updated locales.
+* Fixed a bug where tags were deleted from the plugin database when rules were dragged in the settings.
+* Interface translations were updated.
 
 
 ## 1.0.2
 
-* Minor updates to the repository structure.
+* Minor changes to the repository structure.
 
 
 ## 1.0.1
 
-* Description fixes for the initial release.
+* Fixed the plugin description for the initial release.
 
 
 ## 1.0.0

@@ -35,4 +35,9 @@ export default {
 	OPERATOR_CONTAINS: "contains",
 	OPERATOR_NOT_CONTAINS: "does not contain",
 	FILTER_FOLDER_PLACEHOLDER: "Start typing folder name…",
+	COMMAND_SHOW_CHANGELOG: "View changelog",
+	CHANGELOG_UPDATED: "Tags Color Files was updated to {version}",
+	CHANGELOG_SEE_WHATS_NEW: "See what's new",
+	CHANGELOG_DISMISS: "Dismiss",
+	CHANGELOG_DISMISS_TOOLTIP: "Dismiss until the next update",
 };

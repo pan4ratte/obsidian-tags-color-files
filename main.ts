@@ -27,6 +27,7 @@ import {
 	setIcon,
 	TFile,
 } from "obsidian";
+import { ChangelogModal, renderChangelogNotice } from "./changelog";
 import { t } from "./locales-list";
 
 // Helper class for tag suggestions
@@ -110,6 +111,8 @@ interface TagsColorFilesSettings {
 	applyToBases: boolean;
 	/** Also color links to notes inside notes, in reading view and the editor. */
 	applyToLinks: boolean;
+	/** The release whose "what's new" notice was dismissed. */
+	dismissedChangelogVersion: string;
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
@@ -118,6 +121,7 @@ const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	dotSize: "default",
 	applyToBases: false,
 	applyToLinks: false,
+	dismissedChangelogVersion: "",
 };
 
 /** Marks a Bases file-name link the plugin has colored, so it can be found
@@ -238,6 +242,11 @@ export default class TagsColorFilesPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new TagsColorFilesSettingTab(this.app, this));
+		this.addCommand({
+			id: "show-changelog",
+			name: t("COMMAND_SHOW_CHANGELOG"),
+			callback: () => new ChangelogModal(this.app).open(),
+		});
 
 		this.registerEditorExtension(buildLinkColorExtension(this));
 		// Reading view renders lazily as it scrolls, so color each section as
@@ -308,6 +317,12 @@ export default class TagsColorFilesPlugin extends Plugin {
 			raw as Partial<TagsColorFilesSettings>,
 		);
 		this.normalizeRules();
+		// A fresh install has no update to announce: mark the running release's
+		// changelog notice as seen, and save it so the next update still shows one.
+		if (raw === null) {
+			this.settings.dismissedChangelogVersion = this.manifest.version;
+			await this.saveData(this.settings);
+		}
 	}
 
 	async saveSettings() {
@@ -989,6 +1004,18 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		this.renderRoot = root;
 		root.empty();
 		this.ruleElements = [];
+
+		// What the running release brought, first in the tab until dismissed.
+		const version = this.plugin.manifest.version;
+		renderChangelogNotice(root, {
+			app: this.app,
+			version,
+			dismissedVersion: this.plugin.settings.dismissedChangelogVersion,
+			onDismiss: () => {
+				this.plugin.settings.dismissedChangelogVersion = version;
+				void this.plugin.saveSettings();
+			},
+		});
 
 		new Setting(root).setName(t("GENERAL_SECTION")).setHeading();
 

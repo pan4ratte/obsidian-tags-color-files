@@ -19,7 +19,7 @@ export default {
 	BASES_NAME: "Окрашивать имена файлов в Bases",
 	BASES_DESC: "Применяется к представлениям «Таблица» и «Список», окрашивается только текст",
 	LINKS_NAME: "Окрашивать ссылки на заметки",
-	LINKS_DESC: "Применяет правила окрашивания к вики-ссылкам внутри заметок, в редакторе и в режиме чтения. Окрашивается только текст",
+	LINKS_DESC: "Применяет правила окрашивания к вики-ссылкам внутри заметок, в редакторе и в режиме просмотра. Окрашивается только текст",
 	EXPORT: "Экспорт настроек",
 	IMPORT: "Импорт настроек",
 	EXPORTED: "Успешно экспортировано!",
@@ -35,4 +35,9 @@ export default {
 	OPERATOR_CONTAINS: "содержит",
 	OPERATOR_NOT_CONTAINS: "не содержит",
 	FILTER_FOLDER_PLACEHOLDER: "Начните вводить название папки…",
+	COMMAND_SHOW_CHANGELOG: "Посмотреть список изменений",
+	CHANGELOG_UPDATED: "Tags Color Files обновлён до версии {version}",
+	CHANGELOG_SEE_WHATS_NEW: "Что нового",
+	CHANGELOG_DISMISS: "Скрыть",
+	CHANGELOG_DISMISS_TOOLTIP: "Скрыть до следующего обновления",
 };
