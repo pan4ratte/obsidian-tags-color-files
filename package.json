@@ -6,8 +6,10 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"lint": "eslint .",
-		"lint:fix": "eslint --fix ."
+		"lint": "npm run lint:ts && npm run lint:css",
+		"lint:ts": "eslint .",
+		"lint:css": "stylelint \"**/*.css\" --ignore-disables",
+		"lint:fix": "eslint --fix . && stylelint \"**/*.css\" --fix"
 	},
 	"keywords": [],
 	"author": "pan4ratte",
@@ -22,6 +24,8 @@
 		"esbuild": "^0.28.0",
 		"eslint": "^8.57.1",
 		"obsidian": "^1.11.4",
+		"stylelint": "^17.15.0",
+		"stylelint-config-obsidianmd": "^0.1.0",
 		"ts-loader": "^9.5.4",
 		"tslib": "^2.8.1",
 		"typescript": "^6.0.3",
