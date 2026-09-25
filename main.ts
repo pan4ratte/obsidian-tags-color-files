@@ -136,6 +136,14 @@ const LINK_COLORED_CLASS = "colored-tag-link";
  *  reading-view cleanup — they come and go with the decorations. */
 const EDITOR_LINK_COLORED_CLASS = "colored-tag-editor-link";
 
+/** Coloring methods that draw dots next to the file name. */
+const STRATEGIES_WITH_DOTS: readonly TagsColorFilesSettings["colorStrategy"][] = [
+	"before-text",
+	"after-text",
+	"dots-before-text",
+	"dots-after-text",
+];
+
 /** Asks every editor to rebuild its link decorations — rules, settings or a
  *  linked note's tags changed, none of which the editor itself can see. */
 const refreshLinkColors = StateEffect.define<null>();
@@ -185,6 +193,8 @@ function buildLinkColorExtension(plugin: TagsColorFilesPlugin) {
 				const { state } = view;
 				const sourcePath = state.field(editorInfoField, false)?.file?.path ?? "";
 				const builder = new RangeSetBuilder<Decoration>();
+				// A note tends to link the same targets over and over.
+				const colors = new Map<string, string | null>();
 
 				for (const { from, to } of view.visibleRanges) {
 					let mark: Decoration | null = null;
@@ -192,6 +202,9 @@ function buildLinkColorExtension(plugin: TagsColorFilesPlugin) {
 						from,
 						to,
 						enter: (node) => {
+							// Every token that matters here has "link" in its name;
+							// pass over the rest without splitting it.
+							if (!node.name.includes("link")) return;
 							const classes = node.name.split("_");
 
 							if (classes.includes("formatting-link-start")) {
@@ -202,17 +215,14 @@ function buildLinkColorExtension(plugin: TagsColorFilesPlugin) {
 								const rest = state.sliceDoc(node.to, line.to);
 								const end = rest.indexOf("]]");
 								if (end === -1) return;
-								const color = plugin.getLinkColor(
-									// Inside a table the alias pipe is escaped as `\|`.
-									rest.slice(0, end).split(/\\?\|/)[0],
-									sourcePath,
-								);
-								if (color) {
-									mark = Decoration.mark({
-										class: EDITOR_LINK_COLORED_CLASS,
-										attributes: { style: `--tag-file-color: ${color}` },
-									});
+								// Inside a table the alias pipe is escaped as `\|`.
+								const target = rest.slice(0, end).split(/\\?\|/)[0];
+								let color = colors.get(target);
+								if (color === undefined) {
+									color = plugin.getLinkColor(target, sourcePath);
+									colors.set(target, color);
 								}
+								if (color) mark = plugin.getLinkMark(color);
 								return;
 							}
 
@@ -235,9 +245,25 @@ function buildLinkColorExtension(plugin: TagsColorFilesPlugin) {
 
 export default class TagsColorFilesPlugin extends Plugin {
 	settings!: TagsColorFilesSettings;
-	observer!: MutationObserver;
 	private rules: NormalizedRule[] = [];
-	updateFileColors = debounce(() => this._updateFileColors(), 50, true);
+	/** Matched colors per note path. Everything that shows a note's color reads
+	 *  it through getFileColors(), so a note missing here is shown nowhere. */
+	private colorCache = new Map<string, string[]>();
+	/** One editor mark per color, shared by every link of that color. */
+	private linkMarks = new Map<string, Decoration>();
+	/** Watches the file explorers only, for the rows they render as a folder is
+	 *  expanded or the list is scrolled. */
+	private explorerObserver = new MutationObserver((mutations) =>
+		this.onExplorerMutations(mutations),
+	);
+	/** Watches every window for Bases views re-rendering their rows, and only
+	 *  while Bases coloring is on. */
+	private basesObserver = new MutationObserver((mutations) =>
+		this.onBasesMutations(mutations),
+	);
+	/** A folder rename or a sync fires one event per file; recolor once they
+	 *  settle. */
+	private requestRefresh = debounce(() => this.refreshAll(), 50, true);
 
 	async onload() {
 		await this.loadSettings();
@@ -250,7 +276,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 		this.registerEditorExtension(buildLinkColorExtension(this));
 		// Reading view renders lazily as it scrolls, so color each section as
-		// it is rendered; the full rescan in _updateFileColors() handles changes.
+		// it is rendered; refreshAll() handles changes to what is already there.
 		this.registerMarkdownPostProcessor((el, ctx) => {
 			this.colorRenderedLinks(
 				Array.from(
@@ -261,51 +287,57 @@ export default class TagsColorFilesPlugin extends Plugin {
 		});
 
 		this.registerEvent(
-			this.app.metadataCache.on("changed", () => this.updateFileColors()),
+			this.app.metadataCache.on("changed", (file) => this.onFileChanged(file)),
 		);
 		this.registerEvent(
-			this.app.vault.on("rename", () => this.updateFileColors()),
+			this.app.metadataCache.on("deleted", (file) => {
+				this.colorCache.delete(file.path);
+				// Links to it no longer resolve.
+				this.requestRefresh();
+			}),
 		);
-		this.registerEvent(
-			this.app.workspace.on("layout-change", () => this.updateFileColors()),
-		);
-
-		this.observer = new MutationObserver((mutations) => {
-			let shouldUpdate = false;
-			for (const m of mutations) {
-				for (const node of Array.from(m.addedNodes)) {
-					if (node.nodeType !== Node.ELEMENT_NODE) continue;
-					const el = node as HTMLElement;
-					if (
-						el.classList.contains("nav-file") ||
-						el.querySelector(".nav-file-title") ||
-						// Bases virtualizes its rows: scrolling recycles a cell onto a
-						// different entry and re-renders the link from scratch, which
-						// drops the color. Coloring only sets a class and a custom
-						// property on existing elements, so re-acting to these
-						// mutations cannot feed the observer its own output.
-						(this.settings.applyToBases && el.closest(".bases-view"))
-					) {
-						shouldUpdate = true;
-						break;
-					}
-				}
-				if (shouldUpdate) break;
-			}
-			if (shouldUpdate) this.updateFileColors();
+		// Colors drawn before the metadata cache finished loading can miss tags,
+		// so draw everything again once it first reports being done.
+		const onFirstResolved = this.app.metadataCache.on("resolved", () => {
+			this.app.metadataCache.offref(onFirstResolved);
+			this.colorCache.clear();
+			this.requestRefresh();
 		});
+		this.registerEvent(onFirstResolved);
+		this.registerEvent(
+			this.app.vault.on("rename", () => {
+				// A move can take a note in or out of a rule's folder scope, and
+				// changes what links resolve to.
+				this.colorCache.clear();
+				this.requestRefresh();
+			}),
+		);
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				this.attachObservers();
+				this.colorExplorerRows();
+			}),
+		);
+		this.registerEvent(
+			this.app.workspace.on("window-open", () => this.attachObservers()),
+		);
 
 		this.app.workspace.onLayoutReady(() => {
-			this.observer.observe(activeDocument.body, {
-				childList: true,
-				subtree: true,
-			});
-			window.setTimeout(() => this.updateFileColors(), 500);
+			// Registered only now: while the vault loads, it reports every
+			// existing file as created.
+			this.registerEvent(
+				// A new note can resolve links that pointed nowhere.
+				this.app.vault.on("create", () => this.requestRefresh()),
+			);
+			this.attachObservers();
+			this.refreshAll();
 		});
 	}
 
 	onunload() {
-		if (this.observer) this.observer.disconnect();
+		this.explorerObserver.disconnect();
+		this.basesObserver.disconnect();
+		this.requestRefresh.cancel();
 		this.removeFileColors();
 	}
 
@@ -331,12 +363,15 @@ export default class TagsColorFilesPlugin extends Plugin {
 		);
 		this.normalizeRules();
 		await this.saveData(this.settings);
-		this.updateFileColors();
+		// Bases coloring may have been switched on or off.
+		this.attachObservers();
+		this.refreshAll();
 	}
 
 	/** Rules only change through saveSettings(), so normalize them there once
 	 *  rather than on every color lookup — the editor looks up every visible
-	 *  link on each rebuild. */
+	 *  link on each rebuild. Every color worked out from the old rules goes
+	 *  with them. */
 	private normalizeRules() {
 		this.rules = this.settings.generalRules
 			.filter((c) => c.tag)
@@ -345,35 +380,151 @@ export default class TagsColorFilesPlugin extends Plugin {
 				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
 				_folderScope: (c.folderScope ?? "").trim(),
 			}));
+		this.colorCache.clear();
+		this.linkMarks.clear();
+	}
+
+	/** The main window's document and every popout's. */
+	private getDocuments(): Set<Document> {
+		const docs = new Set<Document>([this.app.workspace.containerEl.doc]);
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			docs.add(leaf.view.containerEl.doc);
+		});
+		return docs;
+	}
+
+	/** Points the observers at the explorers and windows open now. Observing an
+	 *  element again only renews it, so this is safe to repeat. */
+	private attachObservers() {
+		for (const leaf of this.app.workspace.getLeavesOfType("file-explorer")) {
+			// The leaf's element rather than the view's: an explorer left in a
+			// background tab at startup is deferred, and when first shown its
+			// placeholder view is swapped for the real one inside the leaf.
+			const { containerEl } = leaf.view;
+			this.explorerObserver.observe(containerEl.parentElement ?? containerEl, {
+				childList: true,
+				subtree: true,
+			});
+		}
+		if (this.settings.applyToBases) {
+			for (const doc of this.getDocuments()) {
+				this.basesObserver.observe(doc.body, { childList: true, subtree: true });
+			}
+		} else {
+			this.basesObserver.disconnect();
+		}
+	}
+
+	/**
+	 * Colors explorer rows as they are rendered. The callback runs before the
+	 * browser paints, so a new row never shows up uncolored first.
+	 */
+	private onExplorerMutations(mutations: MutationRecord[]) {
+		for (const m of mutations) {
+			const target = m.target as HTMLElement;
+			// Something inside a row was redrawn — possibly the dots with it.
+			if (target.classList.contains("nav-file-title")) {
+				this.colorExplorerRow(target);
+				continue;
+			}
+			for (const node of Array.from(m.addedNodes)) {
+				if (node.nodeType !== Node.ELEMENT_NODE) continue;
+				const el = node as HTMLElement;
+				if (el.classList.contains("nav-file-title")) {
+					this.colorExplorerRow(el);
+				} else if (!el.classList.contains("tag-dots-container")) {
+					el.querySelectorAll<HTMLElement>(".nav-file-title").forEach((row) =>
+						this.colorExplorerRow(row),
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Bases virtualizes its rows: scrolling recycles a cell onto a different
+	 * entry and re-renders the link from scratch, which drops the color. This
+	 * observer sees every change in the window, so it only looks at where each
+	 * change landed, and recolors just the Bases views that changed.
+	 */
+	private onBasesMutations(mutations: MutationRecord[]) {
+		const views = new Set<HTMLElement>();
+		for (const m of mutations) {
+			if (m.addedNodes.length === 0) continue;
+			const view = (m.target as HTMLElement).closest<HTMLElement>(".bases-view");
+			if (view) {
+				views.add(view);
+				continue;
+			}
+			for (const node of Array.from(m.addedNodes)) {
+				if (
+					node.nodeType === Node.ELEMENT_NODE &&
+					(node as HTMLElement).classList.contains("bases-view")
+				) {
+					views.add(node as HTMLElement);
+				}
+			}
+		}
+		views.forEach((view) => this.colorBasesView(view));
+	}
+
+	/** Recolors everything the plugin draws. Each part leaves alone whatever is
+	 *  already drawn right, so a pass where nothing changed costs little. */
+	private refreshAll() {
+		this.requestRefresh.cancel();
+		this.colorExplorerRows();
+		this.colorAllBases();
+		this.colorAllLinks();
+	}
+
+	/**
+	 * Most edits leave a note's tags alone, so recolor only when its colors
+	 * actually changed. A note that is not cached is shown nowhere yet, and
+	 * whatever draws it later works its colors out afresh.
+	 */
+	private onFileChanged(file: TFile) {
+		const before = this.colorCache.get(file.path);
+		if (before === undefined) return;
+		this.colorCache.delete(file.path);
+		const after = this.getFileColors(file);
+		if (
+			after.length === before.length &&
+			after.every((color, i) => color === before[i])
+		) {
+			return;
+		}
+		// Its own row right away; the notes and Bases views that link to it
+		// can wait for the debounce.
+		this.colorExplorerRows(
+			`.nav-file-title[data-path="${CSS.escape(file.path)}"]`,
+		);
+		this.requestRefresh();
 	}
 
 	removeFileColors() {
-		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
-		fileExplorers.forEach((leaf) => {
-			leaf.view.containerEl
-				.querySelectorAll<HTMLElement>(".nav-file-title")
-				.forEach((el) => this.cleanElement(el));
-		});
-		this.removeBasesColors();
-		activeDocument
-			.querySelectorAll<HTMLElement>(`.${LINK_COLORED_CLASS}`)
-			.forEach((el) => this.cleanLink(el));
+		this.colorExplorerRows(".nav-file-title", (el) => this.cleanElement(el));
+		for (const doc of this.getDocuments()) {
+			for (const cls of [BASES_COLORED_CLASS, LINK_COLORED_CLASS]) {
+				doc
+					.querySelectorAll<HTMLElement>(`.${cls}`)
+					.forEach((el) => this.paintLink(el, cls, null));
+			}
+		}
 	}
 
-	private cleanLink(el: HTMLElement) {
-		el.classList.remove(LINK_COLORED_CLASS);
-		el.style.removeProperty("--tag-file-color");
-	}
-
-	/** Cleared by class rather than by position, so a link that has since been
-	 *  scrolled out of a name cell is still found. */
-	private removeBasesColors() {
-		activeDocument
-			.querySelectorAll<HTMLElement>(`.${BASES_COLORED_CLASS}`)
-			.forEach((el) => {
-				el.classList.remove(BASES_COLORED_CLASS);
-				el.style.removeProperty("--tag-file-color");
-			});
+	/** Sets or clears a link's color, touching the element only when that
+	 *  changes something. */
+	private paintLink(el: HTMLElement, cls: string, color: string | null) {
+		if (!color) {
+			if (!el.classList.contains(cls)) return;
+			el.classList.remove(cls);
+			el.style.removeProperty("--tag-file-color");
+			return;
+		}
+		if (!el.classList.contains(cls)) el.classList.add(cls);
+		if (el.style.getPropertyValue("--tag-file-color") !== color) {
+			el.style.setProperty("--tag-file-color", color);
+		}
 	}
 
 	private cleanElement(el: HTMLElement) {
@@ -388,19 +539,33 @@ export default class TagsColorFilesPlugin extends Plugin {
 			"strategy-dots-after-text",
 		);
 		el.style.removeProperty("--tag-file-color");
+		delete el.dataset.tagColors;
 		const existingDots = el.querySelector(".tag-dots-container");
 		if (existingDots) existingDots.remove();
 	}
 
 	/** Colors matching `file`, in rule order — first one wins for single-color
 	 *  strategies, the first three become dots. */
-	private matchColors(file: TFile, rules: NormalizedRule[]): string[] {
+	private getFileColors(file: TFile): string[] {
+		let colors = this.colorCache.get(file.path);
+		if (!colors) {
+			colors = this.matchColors(file);
+			this.colorCache.set(file.path, colors);
+		}
+		return colors;
+	}
+
+	private matchColors(file: TFile): string[] {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const fileTags = cache ? (getAllTags(cache) ?? []) : [];
+		const fileTags = new Set(
+			(cache ? (getAllTags(cache) ?? []) : []).map((tag) =>
+				tag.replace(/^#/, "").toLowerCase(),
+			),
+		);
 		const fileFolder = file.parent?.path ?? "";
 		const matchedColors: string[] = [];
 
-		for (const rule of rules) {
+		for (const rule of this.rules) {
 			// Per-rule folder scope check (empty = applies everywhere)
 			if (rule._folderScope) {
 				const inScope =
@@ -408,9 +573,7 @@ export default class TagsColorFilesPlugin extends Plugin {
 					fileFolder.startsWith(rule._folderScope + "/");
 				if (!inScope) continue;
 			}
-			const hasTag = fileTags.some(
-				(tag) => tag.replace(/^#/, "").toLowerCase() === rule._normalized,
-			);
+			const hasTag = fileTags.has(rule._normalized);
 			if (rule.isNegative ? !hasTag : hasTag) {
 				matchedColors.push(rule.color);
 			}
@@ -426,7 +589,21 @@ export default class TagsColorFilesPlugin extends Plugin {
 			sourcePath,
 		);
 		if (!(file instanceof TFile) || file.extension !== "md") return null;
-		return this.matchColors(file, this.rules)[0] ?? null;
+		return this.getFileColors(file)[0] ?? null;
+	}
+
+	/** The editor mark for links to notes of `color`. Reusing one mark per
+	 *  color lets CodeMirror see that an unchanged link needs no redraw. */
+	getLinkMark(color: string): Decoration {
+		let mark = this.linkMarks.get(color);
+		if (!mark) {
+			mark = Decoration.mark({
+				class: EDITOR_LINK_COLORED_CLASS,
+				attributes: { style: `--tag-file-color: ${color}` },
+			});
+			this.linkMarks.set(color, mark);
+		}
+		return mark;
 	}
 
 	/**
@@ -436,18 +613,16 @@ export default class TagsColorFilesPlugin extends Plugin {
 	 */
 	private colorRenderedLinks(links: HTMLElement[], sourcePath: string) {
 		for (const link of links) {
-			this.cleanLink(link);
-			if (!this.settings.applyToLinks || link.closest(".bases-view")) continue;
 			const href = link.getAttribute("data-href");
-			if (!href) continue;
-			const color = this.getLinkColor(href, sourcePath);
-			if (!color) continue;
-			link.classList.add(LINK_COLORED_CLASS);
-			link.style.setProperty("--tag-file-color", color);
+			const color =
+				this.settings.applyToLinks && href && !link.closest(".bases-view")
+					? this.getLinkColor(href, sourcePath)
+					: null;
+			this.paintLink(link, LINK_COLORED_CLASS, color);
 		}
 	}
 
-	private updateLinkColors() {
+	private colorAllLinks() {
 		const selector = ".markdown-rendered a.internal-link[data-href]";
 		const handled = new Set<HTMLElement>();
 
@@ -469,12 +644,14 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 		// Links outside a note view (hover previews, canvas cards) have no
 		// source note at hand, so resolve them as if from the vault root.
-		this.colorRenderedLinks(
-			Array.from(
-				activeDocument.querySelectorAll<HTMLElement>(selector),
-			).filter((l) => !handled.has(l)),
-			"",
-		);
+		for (const doc of this.getDocuments()) {
+			this.colorRenderedLinks(
+				Array.from(doc.querySelectorAll<HTMLElement>(selector)).filter(
+					(l) => !handled.has(l),
+				),
+				"",
+			);
+		}
 	}
 
 	/**
@@ -486,30 +663,25 @@ export default class TagsColorFilesPlugin extends Plugin {
 	 * Cards view is deliberately absent: its title cell renders `file.name` as a
 	 * plain string, so nothing in the DOM says which file the card is for.
 	 */
-	private getBasesNameLinks(): HTMLElement[] {
-		const links: HTMLElement[] = [];
-		activeDocument
-			.querySelectorAll<HTMLElement>(".bases-view")
-			.forEach((view) => {
-				// Table view tags each cell with the property it renders.
-				view
-					.querySelectorAll<HTMLElement>(
-						'.bases-td[data-property="file.name"] .internal-link[data-href]',
-					)
-					.forEach((el) => links.push(el));
+	private getBasesNameLinks(view: HTMLElement): HTMLElement[] {
+		// Table view tags each cell with the property it renders.
+		const links = Array.from(
+			view.querySelectorAll<HTMLElement>(
+				'.bases-td[data-property="file.name"] .internal-link[data-href]',
+			),
+		);
 
-				// List view builds cells as bare spans with no property id. The
-				// entry's name is the first one it renders — the item's title line.
-				view
-					.querySelectorAll<HTMLElement>(
-						".bases-list-item > .bases-list-item-properties:not(.nested)",
-					)
-					.forEach((props) => {
-						const link = props
-							.querySelector(".bases-list-property")
-							?.querySelector<HTMLElement>(".internal-link[data-href]");
-						if (link) links.push(link);
-					});
+		// List view builds cells as bare spans with no property id. The
+		// entry's name is the first one it renders — the item's title line.
+		view
+			.querySelectorAll<HTMLElement>(
+				".bases-list-item > .bases-list-item-properties:not(.nested)",
+			)
+			.forEach((props) => {
+				const link = props
+					.querySelector(".bases-list-property")
+					?.querySelector<HTMLElement>(".internal-link[data-href]");
+				if (link) links.push(link);
 			});
 		return links;
 	}
@@ -519,78 +691,104 @@ export default class TagsColorFilesPlugin extends Plugin {
 	 * selected — dots and backgrounds are laid out against the file explorer's
 	 * fixed-height rows and have nowhere to sit inside a Bases cell.
 	 */
-	private updateBasesColors(rules: NormalizedRule[]) {
-		this.removeBasesColors();
-		if (!this.settings.applyToBases) return;
+	private colorBasesView(view: HTMLElement) {
+		const colored = new Set<HTMLElement>();
+		if (this.settings.applyToBases) {
+			for (const link of this.getBasesNameLinks(view)) {
+				const href = link.getAttribute("data-href");
+				if (!href) continue;
+				// `data-href` holds the full path for a name cell, but resolve it as a
+				// link target anyway so a shortened form still lands on the right file.
+				const file = this.app.metadataCache.getFirstLinkpathDest(href, "");
+				if (!file || file.extension !== "md") continue;
+				const color = this.getFileColors(file)[0];
+				if (!color) continue;
+				this.paintLink(link, BASES_COLORED_CLASS, color);
+				colored.add(link);
+			}
+		}
+		// Cleared by class rather than by position, so a link that has since been
+		// scrolled out of a name cell is still found.
+		view
+			.querySelectorAll<HTMLElement>(`.${BASES_COLORED_CLASS}`)
+			.forEach((el) => {
+				if (!colored.has(el)) this.paintLink(el, BASES_COLORED_CLASS, null);
+			});
+	}
 
-		for (const link of this.getBasesNameLinks()) {
-			const href = link.getAttribute("data-href");
-			if (!href) continue;
-			// `data-href` holds the full path for a name cell, but resolve it as a
-			// link target anyway so a shortened form still lands on the right file.
-			const file = this.app.metadataCache.getFirstLinkpathDest(href, "");
-			if (!(file instanceof TFile) || file.extension !== "md") continue;
-
-			const matchedColors = this.matchColors(file, rules);
-			if (matchedColors.length === 0) continue;
-
-			link.classList.add(BASES_COLORED_CLASS);
-			link.style.setProperty("--tag-file-color", matchedColors[0]);
+	private colorAllBases() {
+		for (const doc of this.getDocuments()) {
+			doc
+				.querySelectorAll<HTMLElement>(".bases-view")
+				.forEach((view) => this.colorBasesView(view));
 		}
 	}
 
-	private _updateFileColors() {
-		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
-		const normalizedRules = this.rules;
+	private colorExplorerRows(
+		selector = ".nav-file-title",
+		color = (el: HTMLElement) => this.colorExplorerRow(el),
+	) {
+		for (const leaf of this.app.workspace.getLeavesOfType("file-explorer")) {
+			leaf.view.containerEl
+				.querySelectorAll<HTMLElement>(selector)
+				.forEach(color);
+		}
+	}
 
-		this.updateBasesColors(normalizedRules);
-		this.updateLinkColors();
+	/**
+	 * Draws one explorer row. What the row should look like is summed up in a
+	 * single string kept on the row, and a row that already shows it is left
+	 * untouched — redrawing it would recreate its dots and make the browser lay
+	 * the explorer out again for nothing.
+	 */
+	private colorExplorerRow(el: HTMLElement) {
+		const path = el.getAttribute("data-path");
+		const file = path ? this.app.vault.getFileByPath(path) : null;
+		const colors = file?.extension === "md" ? this.getFileColors(file) : [];
+		const { colorStrategy, dotSize } = this.settings;
+		const withDots =
+			colors.length > 0 && STRATEGIES_WITH_DOTS.includes(colorStrategy);
 
-		fileExplorers.forEach((leaf) => {
-			const navFiles =
-				leaf.view.containerEl.querySelectorAll<HTMLElement>(".nav-file-title");
-			navFiles.forEach((el) => {
-				const path = el.getAttribute("data-path");
-				if (!path) return;
-				const file = this.app.vault.getAbstractFileByPath(path);
-				if (!(file instanceof TFile) || file.extension !== "md") return;
-				this.cleanElement(el);
-				const matchedColors = this.matchColors(file, normalizedRules);
+		let positionClass = "";
+		if (withDots) {
+			const hasNavFileParent = !!el.closest("div.nav-folder");
+			const isBefore = colorStrategy.includes("before-text");
+			positionClass = isBefore
+				? hasNavFileParent
+					? "is-before"
+					: "is-before-root"
+				: "is-after";
+		}
+		const shown = withDots ? colors.slice(0, 3) : colors.slice(0, 1);
+		const state =
+			colors.length === 0
+				? ""
+				: [colorStrategy, dotSize, positionClass, ...shown].join("|");
+		if (
+			(el.dataset.tagColors ?? "") === state &&
+			(!withDots || el.querySelector(":scope > .tag-dots-container"))
+		) {
+			return;
+		}
 
-				if (matchedColors.length > 0) {
-					el.classList.add("colored-tag-file");
-					el.classList.add(`strategy-${this.settings.colorStrategy}`);
-					el.style.setProperty("--tag-file-color", matchedColors[0]);
+		this.cleanElement(el);
+		if (!state) return;
+		el.dataset.tagColors = state;
+		el.classList.add("colored-tag-file", `strategy-${colorStrategy}`);
+		el.style.setProperty("--tag-file-color", colors[0]);
 
-					const strategiesWithDots = [
-						"before-text",
-						"after-text",
-						"dots-before-text",
-						"dots-after-text",
-					];
-					if (strategiesWithDots.includes(this.settings.colorStrategy)) {
-						const dotsContainer = createDiv();
-						const hasNavFileParent = !!el.closest("div.nav-folder");
-						const isBefore =
-							this.settings.colorStrategy.includes("before-text");
-						const positionClass = isBefore
-							? hasNavFileParent
-								? "is-before"
-								: "is-before-root"
-							: "is-after";
-						dotsContainer.className = `tag-dots-container ${positionClass} dots-${this.settings.dotSize}`;
-						matchedColors.slice(0, 3).forEach((color, i) => {
-							const dot = createDiv();
-							dot.className = "tag-dot";
-							dot.style.setProperty("--dot-color", color);
-							dot.style.setProperty("--dot-index", i.toString());
-							dotsContainer.appendChild(dot);
-						});
-						el.appendChild(dotsContainer);
-					}
-				}
+		if (withDots) {
+			const dotsContainer = createDiv();
+			dotsContainer.className = `tag-dots-container ${positionClass} dots-${dotSize}`;
+			shown.forEach((color, i) => {
+				const dot = createDiv();
+				dot.className = "tag-dot";
+				dot.style.setProperty("--dot-color", color);
+				dot.style.setProperty("--dot-index", i.toString());
+				dotsContainer.appendChild(dot);
 			});
-		});
+			el.appendChild(dotsContainer);
+		}
 	}
 }
 
@@ -602,6 +800,17 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	ruleElements: { txt: HTMLInputElement; folderInput: HTMLInputElement | null; groupIdx: number }[] = [];
 	errorBanner: HTMLElement | null = null;
 	renderRoot: HTMLElement | null = null;
+	/** A drag reorders the rules on every row it passes over; save them, and
+	 *  recolor the explorer, once the pointer rests. The rows are rebuilt with
+	 *  the save, because saveSettings() replaces the rules array they hold. */
+	saveReorder = debounce(
+		() => {
+			void this.plugin.saveSettings();
+			this.rerender();
+		},
+		300,
+		true,
+	);
 
 
 	constructor(app: App, plugin: TagsColorFilesPlugin) {
@@ -724,6 +933,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				this.draggingGroupIdx = null;
 				this.draggingRuleIdx = null;
 				div.removeClass("is-dragging");
+				this.saveReorder.run();
 				this.rerender();
 			});
 
@@ -737,8 +947,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					const moved = rulesArray.splice(this.draggingRuleIdx, 1)[0];
 					rulesArray.splice(ruleIdx, 0, moved);
 					this.draggingRuleIdx = ruleIdx;
-					void this.plugin.saveSettings();
 					this.rerender();
+					this.saveReorder();
 				}
 			});
 		}
@@ -1043,13 +1253,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					});
 			});
 
-		const strategiesWithDots = [
-			"before-text",
-			"after-text",
-			"dots-before-text",
-			"dots-after-text",
-		];
-		if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
+		if (STRATEGIES_WITH_DOTS.includes(this.plugin.settings.colorStrategy)) {
 			new Setting(generalCard)
 				.setName(t("DOT_SIZE_NAME"))
 				.setDesc(t("DOT_SIZE_DESC"))

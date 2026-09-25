@@ -11,6 +11,10 @@
 
 * The general settings of the plugin are now combined into one shared block.
 * The plugin title and description were removed from the top of the settings tab, in line with Obsidian's guidelines.
+* File coloring is faster and puts less load on Obsidian. While you edit a note, the plugin updates colors only if the note's tags changed. When you scroll the file explorer, only the files that come into view are processed, not the whole list.
+* Fixed a bug where, when scrolling the file explorer or expanding folders, new files appeared uncolored and took their color with a delay. Files are now colored right after Obsidian starts, not half a second later.
+* Fixed a bug where files could stay uncolored in a file explorer or Bases view opened in a new window.
+* Dragging rules in the settings is smoother: the new order is saved when you release the mouse button or briefly hold the pointer still, not on every move.
 
 
 ## 2.2.0
