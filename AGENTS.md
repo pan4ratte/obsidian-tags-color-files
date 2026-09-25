@@ -14,6 +14,8 @@ npm run build    # tsc type-check + production bundle
 npm run lint     # eslint (TypeScript) + stylelint (styles.css)
 ```
 
+Both linters run the rule sets of Obsidian's community plugin review: ESLint uses `eslint-plugin-obsidianmd`'s recommended preset (type-aware, see `eslint.config.mjs`), stylelint uses `stylelint-config-obsidianmd`. A warning here is one the review would report, so fix it rather than disabling the rule.
+
 There are no automated tests. Before calling a change done, `npm run build` and `npm run lint` must both pass. Neither of them runs the plugin, so say what you could not check inside Obsidian and what the user should try by hand.
 
 

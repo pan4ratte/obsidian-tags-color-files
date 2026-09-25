@@ -135,11 +135,13 @@ export function closeColorPicker() {
 export interface ColorSwatchOptions {
 	app: App;
 	value: string;
+	// Function-typed properties rather than methods: the swatch takes them out
+	// of the options object, and a method's type would claim it needs a `this`.
 	/** Called with a `#rrggbb` code once the pointer rests, and on close. */
-	onChange(value: string): void;
+	onChange: (value: string) => void;
 	/** What the suggest button should aim for. Asked on each click, since the
 	 *  coloring method can change while the settings are open. */
-	tone(): ColorTone;
+	tone: () => ColorTone;
 }
 
 /** A round swatch that opens the picker when clicked. */
@@ -263,8 +265,9 @@ class ColorPopover {
 			cls: "tag-color-picker-hex",
 			type: "text",
 			attr: {
+				// No placeholder: the field always holds the current color, and
+				// a code is read with or without its `#`.
 				maxlength: "7",
-				placeholder: "#rrggbb",
 				// Keep phone keyboards from capitalizing, autocorrecting or
 				// suggesting words into a hex code; Enter reads "Done".
 				spellcheck: "false",
