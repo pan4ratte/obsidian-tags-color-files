@@ -75,5 +75,6 @@ Writing Russian text (changelog, `locales/ru.ts`, `README_RU.md`):
 - Use Obsidian's own Russian interface terms. Check them in the installed app bundle instead of guessing: «Динамический просмотр», «Исходный код», «режим просмотра», «Открыть в новом окне».
 - Quote setting and command names exactly as in `locales/ru.ts`, in «ёлочки».
 - Typography: «» quotes, an em dash (—), and the letter ё.
+- A bug is «баг», never «ошибка»: «Исправлен баг: …», «Исправлен баг, из-за которого …». «Ошибка» stays only where it means an error message the plugin shows («сообщение об ошибке»).
 - Preferred words: «блок», not «карточка»; «переводы интерфейса»; «магазин плагинов»; «проводник» for the file explorer.
 - Contributor credits are gender-neutral: «Первый вклад @user в проект — PR #3».
