@@ -1,7 +1,7 @@
 {
 	"id": "tags-color-files",
 	"name": "Tags Color Files",
-	"version": "2.2.0",
+	"version": "2.3.0",
 	"minAppVersion": "1.13.0",
 	"description": "Automatically color files in the file explorer and Bases, and links to them in notes, based on the tags they contain and the rules you create.",
 	"author": "pan4ratte",
