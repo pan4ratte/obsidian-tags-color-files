@@ -1,10 +1,19 @@
 # Плагин Tags Color Files
 
-[English](https://github.com/pan4ratte/obsidian-tags-color-files/blob/main/README.md) | Русский
+<div align="center">
+  <img alt="Tags Color Files" src="media/plugin-demo-settings.png" width="100%">
+</div>
 
-Данный плагин позволяет автоматически выделять файлы в вашем проводнике Obsidian разными цветами на основании имеющихся в них тегов. Цвета файлов определяются правилами, которые вы создаёте в настройках плагина, вводя тег и присваивая ему цвет. После добавления к файлу тега, для которого создано правило, этот файл окрашивается в соответствующий цвет в проводнике Obsidian.
+<div align="center">
+<br>
+<a href="https://pay.cloudtips.ru/p/c0e8eac4"><img alt="badge" src="https://shieldcn.dev/badge/Поддержать%20разработку-(RU%20карты).svg?size=lg&amp;logo=ri%3AFaHeart&amp;logoColor=ef4444&amp;color=09090b&amp;labelTextColor=ef4444"></a>
+<br>
+<p>Данный плагин позволяет автоматически выделять файлы в вашем проводнике Obsidian разными цветами на основании имеющихся в них тегов. Цвета файлов определяются правилами, которые вы создаёте в настройках плагина, вводя тег и присваивая ему цвет. После добавления к файлу тега, для которого создано правило, этот файл окрашивается в соответствующий цвет в проводнике Obsidian.</p>
+</div>
 
-![](media/plugin-demo-settings.png)
+<div align="center">
+<a href="https://github.com/pan4ratte/obsidian-tags-color-files/blob/main/README.md">English</a> | Русский
+</div>
 
 
 ## Фичи
