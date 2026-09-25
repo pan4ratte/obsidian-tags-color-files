@@ -879,9 +879,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				cls: "tags-color-files-settings-group",
 				items: [
 					{
-						// `name`/`desc`/`aliases` feed the settings search index; the row's
-						// own label markup is hidden in CSS because renderBody() draws its
-						// own heading and description.
+						// `name`/`desc`/`aliases` feed the settings search index only; the
+						// row's own label markup is hidden in CSS. Per Obsidian's plugin
+						// guidelines the tab itself carries no top-level title or
+						// description.
 						name: t("SETTINGS_TITLE"),
 						desc: t("PLUGIN_DESCRIPTION"),
 						aliases: [
@@ -989,19 +990,13 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		root.empty();
 		this.ruleElements = [];
 
-		new Setting(root).setName(t("SETTINGS_TITLE")).setHeading();
-
-		const descContainer = root.createDiv({
-			cls: "plugin-description-container",
-		});
-		descContainer.createEl("p", {
-			text: t("PLUGIN_DESCRIPTION"),
-			cls: "setting-item-description",
-		});
-
 		new Setting(root).setName(t("GENERAL_SECTION")).setHeading();
 
-		new Setting(root)
+		// The general options share one card, split by dividers, instead of each
+		// drawing its own — see `.tag-settings-card` in styles.css.
+		const generalCard = root.createDiv({ cls: "tag-settings-card" });
+
+		new Setting(generalCard)
 			.setName(t("COLOR_METHOD_NAME"))
 			.setDesc(t("COLOR_METHOD_DESC"))
 			.addDropdown((dropdown) => {
@@ -1028,7 +1023,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			"dots-after-text",
 		];
 		if (strategiesWithDots.includes(this.plugin.settings.colorStrategy)) {
-			new Setting(root)
+			new Setting(generalCard)
 				.setName(t("DOT_SIZE_NAME"))
 				.setDesc(t("DOT_SIZE_DESC"))
 				.addDropdown((dropdown) => {
@@ -1045,7 +1040,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 				});
 		}
 
-		new Setting(root)
+		new Setting(generalCard)
 			.setName(t("BASES_NAME"))
 			.setDesc(t("BASES_DESC"))
 			.addToggle((toggle) => {
@@ -1057,7 +1052,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					});
 			});
 
-		new Setting(root)
+		new Setting(generalCard)
 			.setName(t("LINKS_NAME"))
 			.setDesc(t("LINKS_DESC"))
 			.addToggle((toggle) => {
@@ -1070,7 +1065,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 			});
 
 		// Backup section
-		const backupSetting = new Setting(root).setName(t("BACKUP_RESTORE"));
+		const backupSetting = new Setting(generalCard).setName(t("BACKUP_RESTORE"));
 
 		if (!Platform.isMobile) {
 			backupSetting.addButton((btn) =>

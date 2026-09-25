@@ -164,7 +164,7 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
 }
 
 /* Obsidian writes the definition's name/desc into the host row for search
-   indexing; the renderer draws its own heading and description, so hide it. */
+   indexing. They are not meant to be shown on the tab, so hide them. */
 .tags-color-files-settings-anchor > .setting-item-info,
 .tags-color-files-settings-anchor > .setting-item-control {
     display: none;
@@ -205,6 +205,39 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     align-items: center;
 }
 
+/* Shared card for the general options: the card draws the outline and the
+   background, its rows only the dividers between them. The row rule ties with
+   the reset above at 0,3,0, so it MUST stay below it. */
+.tags-color-files-settings-root .tag-settings-card {
+    border: 1px solid var(--setting-items-border-color);
+    background-color: var(--setting-items-background);
+    border-radius: var(--setting-items-radius);
+    margin-bottom: var(--size-4-2);
+}
+
+/* Padded like Obsidian's own group rows (20px on both axes by default) rather
+   than with the 16px of the standalone cards. */
+.tags-color-files-settings-root .tag-settings-card > .setting-item {
+    position: relative;
+    padding: var(--setting-items-padding-y) var(--setting-items-padding-x);
+    border: none;
+    background-color: transparent;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+/* Divider drawn the way Obsidian's own `.setting-group` draws it: inset by the
+   row's horizontal padding rather than running to the card's edges. Scores
+   0,4,1, so it beats the reset's `::before { content: none }` at 0,3,1. */
+.tags-color-files-settings-root .tag-settings-card > .setting-item + .setting-item::before {
+    content: '';
+    position: absolute;
+    top: calc(-1 * var(--border-width));
+    left: var(--setting-items-padding-x);
+    right: var(--setting-items-padding-x);
+    border-top: var(--setting-items-divider-width) solid var(--background-modifier-border);
+}
+
 /* "Add rule" row: description on its own line, buttons filling the width below
    it. Ties with the reset above at 0,3,0, so it MUST stay below it. */
 .tags-color-files-settings-root .setting-item.tag-add-rule-setting {
@@ -239,10 +272,6 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     background-color: var(--interactive-accent);
 
     --text-color: var(--text-on-accent);
-}
-
-.plugin-description-container {
-    margin: -4px 16px 24px 16px;
 }
 
 .tag-rules-list {
