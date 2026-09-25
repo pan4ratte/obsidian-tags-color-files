@@ -1,9 +1,22 @@
+import { syntaxTree } from "@codemirror/language";
+import { RangeSetBuilder, StateEffect } from "@codemirror/state";
+import {
+	Decoration,
+	type DecorationSet,
+	type EditorView,
+	ViewPlugin,
+	type ViewUpdate,
+} from "@codemirror/view";
 import {
 	AbstractInputSuggest,
 	type App,
 	debounce,
+	type Editor,
+	editorInfoField,
 	getAllTags,
+	getLinkpath,
 	type MetadataCache,
+	MarkdownView,
 	Menu,
 	Notice,
 	Platform,
@@ -95,6 +108,8 @@ interface TagsColorFilesSettings {
 	dotSize: "small" | "default" | "big";
 	/** Also color the file names Bases renders in its table and list views. */
 	applyToBases: boolean;
+	/** Also color links to notes inside notes, in reading view and the editor. */
+	applyToLinks: boolean;
 }
 
 const DEFAULT_SETTINGS: TagsColorFilesSettings = {
@@ -102,26 +117,139 @@ const DEFAULT_SETTINGS: TagsColorFilesSettings = {
 	colorStrategy: "text",
 	dotSize: "default",
 	applyToBases: false,
+	applyToLinks: false,
 };
 
 /** Marks a Bases file-name link the plugin has colored, so it can be found
  *  again for cleanup without re-deriving where it lives. */
 const BASES_COLORED_CLASS = "colored-tag-base-file";
 
-/** A rule with its tag and folder scope pre-normalized once per update cycle. */
+/** Marks a rendered (reading view) link the plugin has colored. */
+const LINK_COLORED_CLASS = "colored-tag-link";
+
+/** Marks an editor link. Kept apart from LINK_COLORED_CLASS because
+ *  CodeMirror owns these elements and they must never be touched by the
+ *  reading-view cleanup — they come and go with the decorations. */
+const EDITOR_LINK_COLORED_CLASS = "colored-tag-editor-link";
+
+/** Asks every editor to rebuild its link decorations — rules, settings or a
+ *  linked note's tags changed, none of which the editor itself can see. */
+const refreshLinkColors = StateEffect.define<null>();
+
+/** A rule with its tag and folder scope pre-normalized once per settings save. */
 type NormalizedRule = TagColorConfig & {
 	_normalized: string;
 	_folderScope: string;
 };
 
+/**
+ * Colors wikilinks in the editor (live preview and source mode).
+ *
+ * Obsidian's markdown parser names each token of `[[target|alias]]` after its
+ * classes joined with `_`: the brackets carry `formatting-link-start` /
+ * `formatting-link-end`, and everything between them carries
+ * `hmd-internal-link` (plus `link-alias-pipe` / `link-alias` for the alias
+ * part). The target is read from the document text after the opening
+ * brackets rather than from the tokens, so it does not matter how the parser
+ * splits a `#heading` or `^block` suffix.
+ */
+function buildLinkColorExtension(plugin: TagsColorFilesPlugin) {
+	return ViewPlugin.fromClass(
+		class {
+			decorations: DecorationSet;
+
+			constructor(view: EditorView) {
+				this.decorations = this.build(view);
+			}
+
+			update(update: ViewUpdate) {
+				if (
+					update.docChanged ||
+					update.viewportChanged ||
+					// The tree is parsed lazily, so links can appear without an edit.
+					syntaxTree(update.startState) !== syntaxTree(update.state) ||
+					update.transactions.some((tr) =>
+						tr.effects.some((e) => e.is(refreshLinkColors)),
+					)
+				) {
+					this.decorations = this.build(update.view);
+				}
+			}
+
+			build(view: EditorView): DecorationSet {
+				if (!plugin.settings.applyToLinks) return Decoration.none;
+				const { state } = view;
+				const sourcePath = state.field(editorInfoField, false)?.file?.path ?? "";
+				const builder = new RangeSetBuilder<Decoration>();
+
+				for (const { from, to } of view.visibleRanges) {
+					let mark: Decoration | null = null;
+					syntaxTree(state).iterate({
+						from,
+						to,
+						enter: (node) => {
+							const classes = node.name.split("_");
+
+							if (classes.includes("formatting-link-start")) {
+								mark = null;
+								// Embeds open with `![[` and markdown links with `[`.
+								if (state.sliceDoc(node.from, node.to) !== "[[") return;
+								const line = state.doc.lineAt(node.to);
+								const rest = state.sliceDoc(node.to, line.to);
+								const end = rest.indexOf("]]");
+								if (end === -1) return;
+								const color = plugin.getLinkColor(
+									// Inside a table the alias pipe is escaped as `\|`.
+									rest.slice(0, end).split(/\\?\|/)[0],
+									sourcePath,
+								);
+								if (color) {
+									mark = Decoration.mark({
+										class: EDITOR_LINK_COLORED_CLASS,
+										attributes: { style: `--tag-file-color: ${color}` },
+									});
+								}
+								return;
+							}
+
+							if (
+								mark &&
+								classes.includes("hmd-internal-link") &&
+								!classes.includes("hmd-embed")
+							) {
+								builder.add(node.from, node.to, mark);
+							}
+						},
+					});
+				}
+				return builder.finish();
+			}
+		},
+		{ decorations: (v) => v.decorations },
+	);
+}
+
 export default class TagsColorFilesPlugin extends Plugin {
 	settings!: TagsColorFilesSettings;
 	observer!: MutationObserver;
+	private rules: NormalizedRule[] = [];
 	updateFileColors = debounce(() => this._updateFileColors(), 50, true);
 
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new TagsColorFilesSettingTab(this.app, this));
+
+		this.registerEditorExtension(buildLinkColorExtension(this));
+		// Reading view renders lazily as it scrolls, so color each section as
+		// it is rendered; the full rescan in _updateFileColors() handles changes.
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			this.colorRenderedLinks(
+				Array.from(
+					el.querySelectorAll<HTMLElement>("a.internal-link[data-href]"),
+				),
+				ctx.sourcePath,
+			);
+		});
 
 		this.registerEvent(
 			this.app.metadataCache.on("changed", () => this.updateFileColors()),
@@ -179,14 +307,29 @@ export default class TagsColorFilesPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			raw as Partial<TagsColorFilesSettings>,
 		);
+		this.normalizeRules();
 	}
 
 	async saveSettings() {
 		this.settings.generalRules = this.settings.generalRules.filter(
 			(r) => r.tag && r.tag.trim() !== "",
 		);
+		this.normalizeRules();
 		await this.saveData(this.settings);
 		this.updateFileColors();
+	}
+
+	/** Rules only change through saveSettings(), so normalize them there once
+	 *  rather than on every color lookup — the editor looks up every visible
+	 *  link on each rebuild. */
+	private normalizeRules() {
+		this.rules = this.settings.generalRules
+			.filter((c) => c.tag)
+			.map((c) => ({
+				...c,
+				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
+				_folderScope: (c.folderScope ?? "").trim(),
+			}));
 	}
 
 	removeFileColors() {
@@ -197,6 +340,14 @@ export default class TagsColorFilesPlugin extends Plugin {
 				.forEach((el) => this.cleanElement(el));
 		});
 		this.removeBasesColors();
+		activeDocument
+			.querySelectorAll<HTMLElement>(`.${LINK_COLORED_CLASS}`)
+			.forEach((el) => this.cleanLink(el));
+	}
+
+	private cleanLink(el: HTMLElement) {
+		el.classList.remove(LINK_COLORED_CLASS);
+		el.style.removeProperty("--tag-file-color");
 	}
 
 	/** Cleared by class rather than by position, so a link that has since been
@@ -250,6 +401,65 @@ export default class TagsColorFilesPlugin extends Plugin {
 			}
 		}
 		return matchedColors;
+	}
+
+	/** Color of the note `linktext` points to, or null when the link is
+	 *  unresolved or no rule matches. A `#heading` / `^block` suffix is ignored. */
+	getLinkColor(linktext: string, sourcePath: string): string | null {
+		const file = this.app.metadataCache.getFirstLinkpathDest(
+			getLinkpath(linktext.trim()),
+			sourcePath,
+		);
+		if (!(file instanceof TFile) || file.extension !== "md") return null;
+		return this.matchColors(file, this.rules)[0] ?? null;
+	}
+
+	/**
+	 * Colors reading-view links. Bases draws its cells with the same
+	 * `.internal-link` markup, so links inside a Bases view are left to the
+	 * Bases toggle — they are only cleared here, never colored.
+	 */
+	private colorRenderedLinks(links: HTMLElement[], sourcePath: string) {
+		for (const link of links) {
+			this.cleanLink(link);
+			if (!this.settings.applyToLinks || link.closest(".bases-view")) continue;
+			const href = link.getAttribute("data-href");
+			if (!href) continue;
+			const color = this.getLinkColor(href, sourcePath);
+			if (!color) continue;
+			link.classList.add(LINK_COLORED_CLASS);
+			link.style.setProperty("--tag-file-color", color);
+		}
+	}
+
+	private updateLinkColors() {
+		const selector = ".markdown-rendered a.internal-link[data-href]";
+		const handled = new Set<HTMLElement>();
+
+		this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
+			const view = leaf.view;
+			if (!(view instanceof MarkdownView)) return;
+
+			const links = Array.from(
+				view.containerEl.querySelectorAll<HTMLElement>(selector),
+			);
+			this.colorRenderedLinks(links, view.file?.path ?? "");
+			links.forEach((l) => handled.add(l));
+
+			// Dispatched even with the option off, so turning it off clears the
+			// decorations already drawn.
+			const cm = (view.editor as Editor & { cm?: EditorView }).cm;
+			cm?.dispatch({ effects: refreshLinkColors.of(null) });
+		});
+
+		// Links outside a note view (hover previews, canvas cards) have no
+		// source note at hand, so resolve them as if from the vault root.
+		this.colorRenderedLinks(
+			Array.from(
+				activeDocument.querySelectorAll<HTMLElement>(selector),
+			).filter((l) => !handled.has(l)),
+			"",
+		);
 	}
 
 	/**
@@ -316,17 +526,10 @@ export default class TagsColorFilesPlugin extends Plugin {
 
 	private _updateFileColors() {
 		const fileExplorers = this.app.workspace.getLeavesOfType("file-explorer");
-
-		// Pre-normalize rules once per cycle
-		const normalizedRules: NormalizedRule[] = this.settings.generalRules
-			.filter((c) => c.tag)
-			.map((c) => ({
-				...c,
-				_normalized: c.tag.replace(/^#/, "").toLowerCase(),
-				_folderScope: (c.folderScope ?? "").trim(),
-			}));
+		const normalizedRules = this.rules;
 
 		this.updateBasesColors(normalizedRules);
+		this.updateLinkColors();
 
 		fileExplorers.forEach((leaf) => {
 			const navFiles =
@@ -692,6 +895,10 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							"bases",
 							"base",
 							"table",
+							"link",
+							"links",
+							"wikilink",
+							"wikilinks",
 							"highlight",
 							"rules",
 							"coloring rules",
@@ -846,6 +1053,18 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.applyToBases)
 					.onChange(async (value: boolean) => {
 						this.plugin.settings.applyToBases = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(root)
+			.setName(t("LINKS_NAME"))
+			.setDesc(t("LINKS_DESC"))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.applyToLinks)
+					.onChange(async (value: boolean) => {
+						this.plugin.settings.applyToLinks = value;
 						await this.plugin.saveSettings();
 					});
 			});

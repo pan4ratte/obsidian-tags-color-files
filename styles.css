@@ -93,6 +93,27 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     --link-unresolved-color: var(--tag-file-color);
 }
 
+
+/* --- LINKS IN NOTES --- */
+
+/* Reading view and the editor both paint a wikilink with `var(--link-color)`
+   and `var(--link-color-hover)` — the editor through
+   `.cm-s-obsidian span.cm-hmd-internal-link`. Redefining the variables, as for
+   Bases, keeps the rule color through hover. */
+.markdown-rendered .internal-link.colored-tag-link,
+.cm-s-obsidian .colored-tag-editor-link {
+    --link-color: var(--tag-file-color);
+    --link-color-hover: var(--tag-file-color);
+}
+
+/* CodeMirror decides whether the plugin's mark wraps Obsidian's
+   `.cm-hmd-internal-link` token or sits inside it. Inside, the text would just
+   inherit the token's `color`, which the variables on the mark cannot reach,
+   so set it directly. */
+.cm-s-obsidian span.colored-tag-editor-link {
+    color: var(--tag-file-color);
+}
+
 /* --- SETTINGS TAB STYLES --- */
 
 /* --- Declarative settings host (Obsidian 1.13+) ---

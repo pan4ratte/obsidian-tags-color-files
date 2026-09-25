@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0
+
+### New features
+
+* **Coloring links to notes.** A new "Color links to notes" toggle in the general settings applies the coloring rules to wikilinks inside notes, in the editor (live preview and source mode) and in reading view. A link takes the color of the note it points to; only text is colored, whichever coloring method is selected.
+
+
 ## 2.2.0
 
 ### New features

@@ -25,7 +25,11 @@ Rules are ordered in the plugin settings by dragging them or with the arrows. Wh
 
 Coloring in Bases can optionally be enabled for the table and list views. Only the text of the file name is colored there, whichever coloring method is selected.
 
-### 5. Backup and restore
+### 5. Coloring links to notes
+
+Links to notes inside your notes can optionally be colored too, both in the editor and in reading view. A link takes the color of the note it points to, and only its text is colored, whichever coloring method is selected.
+
+### 6. Backup and restore
 
 All of your rules can be exported from and imported back into the plugin. Export is available on desktop only, because of mobile platform limitations.
 

@@ -18,6 +18,8 @@ export default {
 	DOT_BIG: "Big",
 	BASES_NAME: "Color file names in Bases",
 	BASES_DESC: "Applies to the table and list views, only text is colored",
+	LINKS_NAME: "Color links to notes",
+	LINKS_DESC: "Applies the coloring rules to wikilinks inside notes, in the editor and in reading view. Only text is colored",
 	EXPORT: "Export settings",
 	IMPORT: "Import settings",
 	EXPORTED: "Exported successfully!",
