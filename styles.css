@@ -305,31 +305,165 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     min-width: 0;
 }
 
-.tag-color-setting-item .tag-color-picker-input {
-    appearance: none;
-    border: none;
-    padding: 0;
-    background: none;
-    cursor: pointer;
+/* The rule's color. A plain element rather than a <button>, so none of
+   Obsidian's button looks (background, shadow, hover color) has to be undone. */
+.tag-color-swatch {
+    flex: 0 0 24px;
     width: 24px;
     height: 24px;
-    min-width: 24px;
-    min-height: 24px;
-    max-width: 24px;
-    max-height: 24px;
-    flex: 0 0 24px;
+    border: var(--border-width) solid var(--background-modifier-border);
     border-radius: 50%;
-    overflow: hidden;
+    background-color: var(--swatch-color);
+    cursor: pointer;
 }
 
-.tag-color-setting-item .tag-color-picker-input::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border-radius: 50%;
+/* Only where there is a real pointer: a touch screen would keep the hover look
+   on the swatch after it is tapped. */
+@media (hover: hover) {
+    .tag-color-swatch:hover {
+        border-color: var(--background-modifier-border-hover);
+    }
 }
 
-.tag-color-setting-item .tag-color-picker-input::-webkit-color-swatch {
-    border: 1px solid var(--background-modifier-border);
+.tag-color-swatch:focus-visible {
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* A 24px circle is a small target for a finger. Widen what can be tapped to
+   40px without changing how it looks; 8px stays inside the row's 10px gap, so
+   it never takes taps meant for the controls beside it. */
+.is-mobile .tag-color-swatch {
+    position: relative;
+}
+
+.is-mobile .tag-color-swatch::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+}
+
+
+/* --- COLOR PICKER ---
+   Opened from a swatch, over the settings window. It is drawn with Obsidian's
+   `--menu-*` variables — the ones its own `.menu` uses — so it takes the same
+   background, border, corners, shadow and blur as a menu does under any theme.
+   The padding is its own: `--menu-padding` is sized for rows of menu items and
+   turns into bottom-sheet padding on phones. */
+
+.tag-color-popover {
+    position: fixed;
+    z-index: var(--layer-menu);
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-3);
+    width: 224px;
+    padding: var(--size-4-3);
+    border: var(--menu-border-width) solid var(--menu-border-color);
+    border-radius: var(--menu-radius);
+    corner-shape: var(--menu-corner-shape);
+    background-color: var(--menu-background);
+    backdrop-filter: var(--menu-backdrop-filter);
+    box-shadow: var(--menu-shadow);
+}
+
+/* Saturation left to right, brightness bottom to top, over the current hue. */
+.tag-color-picker-area {
+    position: relative;
+    height: 140px;
+    border-radius: var(--radius-s);
+    background:
+        linear-gradient(to top, #000, transparent),
+        linear-gradient(to right, #fff, transparent),
+        hsl(var(--picker-h) 100% 50%);
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.tag-color-picker-hue {
+    position: relative;
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(
+        to right,
+        hsl(0deg 100% 50%),
+        hsl(60deg 100% 50%),
+        hsl(120deg 100% 50%),
+        hsl(180deg 100% 50%),
+        hsl(240deg 100% 50%),
+        hsl(300deg 100% 50%),
+        hsl(360deg 100% 50%)
+    );
+    cursor: pointer;
+    touch-action: none;
+}
+
+.tag-color-picker-area:focus-visible,
+.tag-color-picker-hue:focus-visible {
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* The white ring with a dark edge stays visible on any color beneath it. */
+.tag-color-picker-area-thumb,
+.tag-color-picker-hue-thumb {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
     border-radius: 50%;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 40%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.tag-color-picker-area-thumb {
+    top: calc((1 - var(--picker-v)) * 100%);
+    left: calc(var(--picker-s) * 100%);
+    background-color: var(--picker-color);
+}
+
+.tag-color-picker-hue-thumb {
+    top: 50%;
+    left: calc(var(--picker-h) / 360 * 100%);
+    background-color: hsl(var(--picker-h) 100% 50%);
+}
+
+/* Sized for fingers on touch screens: a taller hue bar, and handles the size
+   of Obsidian's own slider handles there, so they show past a fingertip. */
+.is-mobile .tag-color-picker-hue {
+    height: 24px;
+    border-radius: 12px;
+}
+
+.is-mobile .tag-color-picker-area-thumb,
+.is-mobile .tag-color-picker-hue-thumb {
+    width: 24px;
+    height: 24px;
+}
+
+/* A phone has the room for a bigger square to drag across; 280px still fits
+   the narrowest phones with a margin. */
+.is-phone .tag-color-popover {
+    width: 280px;
+}
+
+.is-phone .tag-color-picker-area {
+    height: 180px;
+}
+
+.tag-color-picker-hex-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+}
+
+.tag-color-popover .tag-color-picker-hex {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--font-monospace);
+}
+
+.tag-color-popover .tag-color-picker-hex.is-invalid {
+    border-color: var(--text-error);
 }
 
 .tag-rules-list .tag-color-setting-item input[type="text"] {

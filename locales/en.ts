@@ -32,6 +32,8 @@ export default {
 	TAG_PLACEHOLDER: "Enter a tag (case-insensitive)",
 	DUPLICATE_TAG_ERROR:"Warning: at least two conflicting rules created for one tag! Choose another tag.",
 	INVALID_TAG_ERROR: "Invalid tag name",
+	COLOR_PICKER_LABEL: "Rule color",
+	COLOR_PICKER_SUGGEST: "Suggest a color",
 	OPERATOR_CONTAINS: "contains",
 	OPERATOR_NOT_CONTAINS: "does not contain",
 	FILTER_FOLDER_PLACEHOLDER: "Start typing folder name…",

@@ -28,6 +28,7 @@ import {
 	TFile,
 } from "obsidian";
 import { ChangelogModal, renderChangelogNotice } from "./changelog";
+import { closeColorPicker, createColorSwatch } from "./color-picker";
 import { t } from "./locales-list";
 
 // Helper class for tag suggestions
@@ -954,15 +955,19 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 		}
 
 		// ── Color picker (first in row) ───────────────────────────────────────
-		const cp = createEl("input");
-		cp.type = "color";
-		cp.value = config.color;
-		cp.addClass("tag-color-picker-input");
-		cp.onchange = (e: Event) => {
-			config.color = (e.target as HTMLInputElement).value;
-			void this.plugin.saveSettings();
-		};
-		div.appendChild(cp);
+		createColorSwatch(div, {
+			app: this.app,
+			value: config.color,
+			onChange: (color) => {
+				config.color = color;
+				void this.plugin.saveSettings();
+			},
+			// Every other method, and Bases and links, color text or dots.
+			tone: () =>
+				this.plugin.settings.colorStrategy === "background"
+					? "background"
+					: "foreground",
+		});
 
 		// ── Operator button (contains / doesn't contain) ──────────────────────
 		// Matches Obsidian's native "combobox-button filter-operator" element 1:1
@@ -1160,6 +1165,7 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 							// the rendered rows on tab switch, so the root is always rebuilt
 							// on the way back in.
 							return () => {
+								closeColorPicker();
 								this.renderRoot = null;
 								this.ruleElements = [];
 								this.errorBanner = null;
@@ -1211,6 +1217,8 @@ class TagsColorFilesSettingTab extends PluginSettingTab {
 	}
 
 	private renderBody(root: HTMLElement): void {
+		// The picker belongs to a swatch that is about to be replaced.
+		closeColorPicker();
 		this.renderRoot = root;
 		root.empty();
 		this.ruleElements = [];

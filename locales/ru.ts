@@ -32,6 +32,8 @@ export default {
 	TAG_PLACEHOLDER: "Введите тег (регистр не учитывается)",
 	DUPLICATE_TAG_ERROR:"Внимание: По крайней мере два конфликтующих правила созданы для одного тега! Выберите другой тег",
 	INVALID_TAG_ERROR: "Некорректное имя тега",
+	COLOR_PICKER_LABEL: "Цвет правила",
+	COLOR_PICKER_SUGGEST: "Подобрать цвет",
 	OPERATOR_CONTAINS: "содержит",
 	OPERATOR_NOT_CONTAINS: "не содержит",
 	FILTER_FOLDER_PLACEHOLDER: "Начните вводить название папки…",

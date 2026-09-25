@@ -6,6 +6,7 @@
 
 * **Coloring wikilinks in notes.** A new "Color links to notes" toggle has been added to the general settings. When it's on, the coloring rules also apply to wikilinks inside notes. A link takes the color of the note it links to.
 * **Changelog in the plugin.** After an update, the plugin settings show a notification from which you can open the changelog of the new version. Once dismissed, it won't appear again until the next update. The changelog can also be opened with the "View changelog" command.
+* **Custom color picker.** Instead of the system color dialog, the plugin now opens its own color picker. You can paste a hex code into its field, for example `#4a90e2`. The dice button suggests shades that suit the current theme, light or dark. If the "Background" coloring method is selected, these are soft tints that text stays easy to read on; otherwise, they are saturated colors that stand out.
 
 ### Improvements and bug fixes
 
