@@ -586,10 +586,29 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     color: var(--text-muted);
 }
 
-/* Grows to fill the row, but wants at least ~16em: when there isn't that much room
-   beside the buttons, the buttons wrap under it instead of squeezing it. */
-.tag-changelog-notice-text {
+/* The icon and the text. Grows to fill the row, but wants at least ~16em: when
+   there isn't that much room beside the buttons, the buttons wrap under it
+   instead of squeezing it. */
+.tag-changelog-message {
+    display: flex;
     flex: 1 1 16em;
+    align-items: center;
+    gap: var(--size-4-2);
+    min-width: 0;
+}
+
+/* With the buttons wrapped onto their own line (see changelog.ts), the message
+   is centered above them — icon and text as one, and every line of the text
+   when it wraps — and given room above and below, so it stands as the card's
+   heading rather than hugging its edge and the buttons. Only the alignment and
+   the height change, never the message's width, which decides the wrapping. */
+.tag-changelog-notice.is-stacked .tag-changelog-message {
+    justify-content: center;
+    padding-block: var(--size-4-2);
+    text-align: center;
+}
+
+.tag-changelog-notice-text {
     min-width: 0;
     color: var(--text-accent);
 }
@@ -620,9 +639,50 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
     font-size: var(--font-ui-smaller);
 }
 
+/* On a phone the card has the screen's whole width to itself, and the smallest
+   text size reads as cramped there. The text steps up a size — Obsidian scales
+   its sizes with the reading text on phones — with the icon to match, room to
+   wrap onto a second line, and more space around it. The buttons keep their
+   own size, set above. */
+.is-phone .tag-changelog-notice {
+    gap: var(--size-4-3);
+    padding: var(--size-4-3) var(--size-4-4);
+}
+
+.is-phone .tag-changelog-notice-text {
+    font-size: var(--font-ui-small);
+    line-height: var(--line-height-normal);
+}
+
+.is-phone .tag-changelog-icon svg {
+    width: var(--icon-m);
+    height: var(--icon-m);
+}
+
+/* On a phone the two buttons get a line of their own and share it equally,
+   each as wide as half the card: easy to hit with a thumb, and never pushed to
+   the card's far edge. */
+.is-phone .tag-changelog-actions {
+    flex: 1 1 100%;
+    margin-left: 0;
+}
+
+.is-phone .tag-changelog-open,
+.is-phone .tag-changelog-dismiss {
+    flex: 1 1 0;
+}
+
 /* "See what's new" takes the accent only under the pointer (or keyboard focus).
-   Scoped under the card to out-rank Obsidian's own button:hover. */
-.tag-changelog-notice .tag-changelog-open:hover,
+   Scoped under the card to out-rank Obsidian's own button:hover. The hover half
+   is kept to devices with a real pointer: a touch screen would leave the
+   button accented after it was tapped, as if it were still selected. */
+@media (hover: hover) {
+    .tag-changelog-notice .tag-changelog-open:hover {
+        background-color: var(--interactive-accent-hover);
+        color: var(--text-on-accent);
+    }
+}
+
 .tag-changelog-notice .tag-changelog-open:focus-visible {
     background-color: var(--interactive-accent-hover);
     color: var(--text-on-accent);
@@ -642,6 +702,14 @@ body:not(.is-grabbing) .nav-files-container .nav-file-title.strategy-dots-after-
 
 .tag-markdown-modal * {
     user-select: text;
+}
+
+/* On phones Obsidian lays a modal's content out as a flex column, and margins
+   between flex items add up instead of collapsing: every gap between headings
+   and lists would open up to the sum of both margins. Laid out as a block, the
+   changelog is spaced as it is on desktop. */
+.is-phone .modal-content.tag-markdown-modal {
+    display: block;
 }
 
 .tag-markdown-modal h1 {

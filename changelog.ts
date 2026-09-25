@@ -69,8 +69,10 @@ export function renderChangelogNotice(parent: HTMLElement, options: ChangelogNot
 	if (options.dismissedVersion === options.version) return;
 
 	const card = parent.createDiv({ cls: "tag-changelog-notice" });
-	setIcon(card.createSpan({ cls: "tag-changelog-icon" }), "sparkles");
-	card.createSpan({
+	// The icon and the text travel together, so they can be centered as one.
+	const message = card.createDiv({ cls: "tag-changelog-message" });
+	setIcon(message.createSpan({ cls: "tag-changelog-icon" }), "sparkles");
+	message.createSpan({
 		cls: "tag-changelog-notice-text",
 		text: t("CHANGELOG_UPDATED").replace("{version}", options.version),
 	});
@@ -90,7 +92,22 @@ export function renderChangelogNotice(parent: HTMLElement, options: ChangelogNot
 		text: t("CHANGELOG_DISMISS"),
 	});
 	setTooltip(dismiss, t("CHANGELOG_DISMISS_TOOLTIP"));
+
+	// Once the buttons have wrapped onto a line of their own, the message is
+	// centered above them. Where they wrap depends on how long the translated
+	// labels are, so it is measured, not guessed from a width. Centering changes
+	// only the alignment inside the message, never its width, so it cannot make
+	// the buttons fit back beside it and set the two flipping.
+	const stacking = new ResizeObserver(() => {
+		card.toggleClass(
+			"is-stacked",
+			actions.offsetTop >= message.offsetTop + message.offsetHeight,
+		);
+	});
+	stacking.observe(card);
+
 	dismiss.addEventListener("click", () => {
+		stacking.disconnect();
 		options.onDismiss();
 		if (card.win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			card.remove();
