@@ -3,7 +3,7 @@
 	"name": "Tags Color Files",
 	"version": "2.2.0",
 	"minAppVersion": "1.13.0",
-	"description": "Color files in file explorer automatically, based on the tags they contain and the rules you create.",
+	"description": "Automatically color files in the file explorer and Bases, and links to them in notes, based on the tags they contain and the rules you create.",
 	"author": "pan4ratte",
 	"authorUrl": "https://github.com/pan4ratte/",
 	"isDesktopOnly": false
